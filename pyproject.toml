@@ -83,6 +83,12 @@ api = [
 dbt = [
     "dbt-core>=1.6",
 ]
+s3 = [
+    "boto3>=1.28",
+]
+kafka = [
+    "confluent-kafka>=2.0",
+]
 all = [
     "trustpipe[trust,drift,poisoning,merkle,llm,dashboard,api]",
 ]
