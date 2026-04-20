@@ -50,9 +50,6 @@ poisoning = [
     "pyod>=1.0",
     "scikit-learn>=1.3",
 ]
-merkle = [
-    "pymerkletools>=1.0",
-]
 pandas = [
     "trustpipe[trust]",
 ]
@@ -90,7 +87,7 @@ kafka = [
     "confluent-kafka>=2.0",
 ]
 all = [
-    "trustpipe[trust,drift,poisoning,merkle,llm,dashboard,api]",
+    "trustpipe[trust,drift,poisoning,llm,dashboard,api]",
 ]
 dev = [
     "trustpipe[all]",
