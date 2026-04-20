@@ -278,3 +278,75 @@ def scan(ctx: click.Context, target: str, threshold: float, fmt: str) -> None:
     else:
         from trustpipe.cli.formatters import format_scan_result
         format_scan_result(result)
+
+
+@cli.command()
+@click.argument("dataset")
+@click.option(
+    "--regulation", "-r", default="eu-ai-act-article-10",
+    type=click.Choice(["eu-ai-act-article-10", "datacard", "audit-log"]),
+)
+@click.option("--format", "fmt", type=click.Choice(["markdown", "json"]), default="markdown")
+@click.option("--output", "-o", "output_path", type=click.Path(), help="Write report to file")
+@click.pass_context
+def comply(ctx: click.Context, dataset: str, regulation: str, fmt: str, output_path: Optional[str]) -> None:
+    """Generate a compliance report for a dataset.
+
+    Requires the dataset to have provenance records.
+
+    Examples:
+      trustpipe comply customer_features
+      trustpipe comply training_set --regulation eu-ai-act-article-10
+      trustpipe comply data --regulation datacard --output report.md
+    """
+    tp = _get_tp(ctx)
+
+    chain = tp.trace(dataset)
+    if not chain:
+        console.print(f"[yellow]No provenance records found for '{dataset}'[/yellow]")
+        console.print("Track data first: tp.track(data, name='...')")
+        return
+
+    content = tp.comply(dataset, regulation=regulation, output_format=fmt)
+
+    if output_path:
+        Path(output_path).write_text(content)
+        console.print(f"[green]✓[/green] Report written to {output_path}")
+    else:
+        if fmt == "json":
+            click.echo(content)
+        else:
+            console.print(content)
+
+
+@cli.command(name="export")
+@click.option("--format", "fmt", type=click.Choice(["json", "csv"]), default="json")
+@click.option("--output", "-o", "output_path", type=click.Path(), help="Write to file")
+@click.pass_context
+def export_cmd(ctx: click.Context, fmt: str, output_path: Optional[str]) -> None:
+    """Export all provenance records."""
+    tp = _get_tp(ctx)
+    records = tp._storage.get_latest_records(tp.project, limit=100000)
+
+    if not records:
+        console.print("[yellow]No records to export[/yellow]")
+        return
+
+    if fmt == "json":
+        data = json.dumps([r.to_dict() for r in records], indent=2, default=str)
+    else:
+        # CSV
+        import csv
+        import io
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["id", "name", "source", "row_count", "fingerprint", "merkle_root", "created_at"])
+        for r in records:
+            writer.writerow([r.id, r.name, r.source, r.row_count, r.fingerprint[:16], r.merkle_root[:16], r.created_at.isoformat()])
+        data = buf.getvalue()
+
+    if output_path:
+        Path(output_path).write_text(data)
+        console.print(f"[green]✓[/green] Exported {len(records)} records to {output_path}")
+    else:
+        click.echo(data)

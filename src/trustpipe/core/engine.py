@@ -234,6 +234,39 @@ class TrustPipe:
         detector = PoisoningDetector(config=self._config)
         return detector.scan(data, detectors=detectors)
 
+    # ── Layer 3: Compliance ────────────────────────────────────
+
+    def comply(
+        self,
+        name: str,
+        *,
+        regulation: str = "eu-ai-act-article-10",
+        output_format: str = "markdown",
+        user_metadata: Optional[dict[str, Any]] = None,
+    ) -> str:
+        """Generate a compliance report for a named dataset.
+
+        Args:
+            name: The dataset to report on (must have provenance).
+            regulation: Target regulation ("eu-ai-act-article-10", "datacard", "audit-log").
+            output_format: "markdown", "json", or "html".
+            user_metadata: User-supplied fields (intended_use, bias info, etc.).
+
+        Returns:
+            The report content as a string.
+        """
+        from trustpipe.compliance.reporter import ComplianceReporter
+
+        reporter = ComplianceReporter(storage=self._storage, config=self._config)
+        return reporter.generate(
+            dataset_name=name,
+            regulation=regulation,
+            project=self._project,
+            output_format=output_format,
+            user_metadata=user_metadata,
+            chain_root=self._chain.root,
+        )
+
     # ── Plugins ───────────────────────────────────────────────
 
     def pandas(self) -> "PandasPlugin":
@@ -241,6 +274,14 @@ class TrustPipe:
         from trustpipe.plugins.pandas_plugin import PandasPlugin
 
         plugin = PandasPlugin(self)
+        plugin.activate()
+        return plugin
+
+    def spark(self, spark_session: Any) -> "SparkPlugin":
+        """Activate Spark auto-tracking via DataFrameReader/Writer wrapping."""
+        from trustpipe.plugins.spark_plugin import SparkPlugin
+
+        plugin = SparkPlugin(self, spark_session)
         plugin.activate()
         return plugin
 
