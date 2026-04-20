@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -12,9 +12,7 @@ from trustpipe.compliance.eu_ai_act import (
     assess_compliance_gaps,
     build_article10_metadata,
 )
-from trustpipe.compliance.schemas import Article10Metadata
 from trustpipe.core.config import TrustPipeConfig
-from trustpipe.provenance.record import ProvenanceRecord
 from trustpipe.storage.base import StorageBackend
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -32,7 +30,7 @@ class ComplianceReporter:
     def __init__(
         self,
         storage: StorageBackend,
-        config: Optional[TrustPipeConfig] = None,
+        config: TrustPipeConfig | None = None,
     ) -> None:
         self._storage = storage
         self._config = config or TrustPipeConfig()
@@ -50,8 +48,8 @@ class ComplianceReporter:
         regulation: str = "eu-ai-act-article-10",
         project: str = "default",
         output_format: str = "markdown",
-        user_metadata: Optional[dict[str, Any]] = None,
-        chain_root: Optional[str] = None,
+        user_metadata: dict[str, Any] | None = None,
+        chain_root: str | None = None,
     ) -> str:
         """Generate a compliance report for a named dataset.
 
@@ -88,12 +86,17 @@ class ComplianceReporter:
 
         if output_format == "json":
             import json
-            return json.dumps({
-                "dataset_name": dataset_name,
-                "regulation": regulation,
-                "metadata": metadata.model_dump(),
-                "gaps": [g.model_dump() for g in gaps],
-            }, indent=2, default=str)
+
+            return json.dumps(
+                {
+                    "dataset_name": dataset_name,
+                    "regulation": regulation,
+                    "metadata": metadata.model_dump(),
+                    "gaps": [g.model_dump() for g in gaps],
+                },
+                indent=2,
+                default=str,
+            )
 
         # Render template
         template_file = REGULATION_TEMPLATES.get(regulation)

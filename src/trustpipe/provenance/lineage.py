@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from trustpipe.provenance.record import ProvenanceRecord
 from trustpipe.storage.base import StorageBackend
@@ -32,7 +31,7 @@ class LineageGraph:
         record_id: str,
         storage: StorageBackend,
         max_depth: int = 0,
-    ) -> Optional[LineageGraph]:
+    ) -> LineageGraph | None:
         """Build a lineage graph starting from a record, walking ancestors."""
         record = storage.load_provenance_record(record_id)
         if not record:
@@ -83,9 +82,7 @@ class LineageGraph:
         source = f" ← {node.record.source}" if node.record.source else ""
         rows = f" ({node.record.row_count} rows)" if node.record.row_count else ""
 
-        lines.append(
-            f"{prefix}{connector}[{verified}] {node.record.name}{source}{rows}"
-        )
+        lines.append(f"{prefix}{connector}[{verified}] {node.record.name}{source}{rows}")
 
         child_prefix = prefix + ("    " if is_last or is_root else "│   ")
         for i, parent in enumerate(node.parents):

@@ -6,7 +6,6 @@ import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from trustpipe.core.exceptions import StorageError
 from trustpipe.provenance.record import ProvenanceRecord
@@ -20,7 +19,7 @@ class SQLiteBackend(StorageBackend):
 
     def __init__(self, path: Path | str) -> None:
         self._path = Path(path)
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conn: sqlite3.Connection | None = None
 
     def _get_conn(self) -> sqlite3.Connection:
         if self._conn is None:
@@ -47,9 +46,7 @@ class SQLiteBackend(StorageBackend):
 
     def _get_schema_version(self, conn: sqlite3.Connection) -> int:
         try:
-            row = conn.execute(
-                "SELECT MAX(version) FROM schema_version"
-            ).fetchone()
+            row = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()
             return row[0] if row and row[0] else 0
         except sqlite3.OperationalError:
             return 0
@@ -91,11 +88,9 @@ class SQLiteBackend(StorageBackend):
         except sqlite3.Error as e:
             raise StorageError(f"Failed to save provenance record: {e}") from e
 
-    def load_provenance_record(self, record_id: str) -> Optional[ProvenanceRecord]:
+    def load_provenance_record(self, record_id: str) -> ProvenanceRecord | None:
         conn = self._get_conn()
-        row = conn.execute(
-            "SELECT * FROM provenance_records WHERE id = ?", (record_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM provenance_records WHERE id = ?", (record_id,)).fetchone()
         if not row:
             return None
         return self._row_to_record(row)
@@ -111,26 +106,28 @@ class SQLiteBackend(StorageBackend):
         return [self._row_to_record(r) for r in rows]
 
     def _row_to_record(self, row: sqlite3.Row) -> ProvenanceRecord:
-        return ProvenanceRecord.from_dict({
-            "id": row["id"],
-            "name": row["name"],
-            "source": row["source"],
-            "parent_ids": json.loads(row["parent_ids"] or "[]"),
-            "fingerprint": row["fingerprint"],
-            "row_count": row["row_count"],
-            "column_count": row["column_count"],
-            "column_names": json.loads(row["column_names"] or "[]"),
-            "byte_size": row["byte_size"],
-            "statistical_summary": json.loads(row["statistical_summary"] or "{}"),
-            "merkle_root": row["merkle_root"],
-            "merkle_index": row["merkle_index"],
-            "previous_root": row["previous_root"],
-            "tags": json.loads(row["tags"] or "[]"),
-            "metadata": json.loads(row["metadata"] or "{}"),
-            "created_at": row["created_at"],
-            "data_timestamp": row["data_timestamp"],
-            "project": row["project"],
-        })
+        return ProvenanceRecord.from_dict(
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "source": row["source"],
+                "parent_ids": json.loads(row["parent_ids"] or "[]"),
+                "fingerprint": row["fingerprint"],
+                "row_count": row["row_count"],
+                "column_count": row["column_count"],
+                "column_names": json.loads(row["column_names"] or "[]"),
+                "byte_size": row["byte_size"],
+                "statistical_summary": json.loads(row["statistical_summary"] or "{}"),
+                "merkle_root": row["merkle_root"],
+                "merkle_index": row["merkle_index"],
+                "previous_root": row["previous_root"],
+                "tags": json.loads(row["tags"] or "[]"),
+                "metadata": json.loads(row["metadata"] or "{}"),
+                "created_at": row["created_at"],
+                "data_timestamp": row["data_timestamp"],
+                "project": row["project"],
+            }
+        )
 
     # ── Merkle ────────────────────────────────────────────────
 
@@ -174,9 +171,7 @@ class SQLiteBackend(StorageBackend):
         )
         conn.commit()
 
-    def load_latest_trust_score(
-        self, dataset_name: str, project: str = "default"
-    ) -> Optional[dict]:
+    def load_latest_trust_score(self, dataset_name: str, project: str = "default") -> dict | None:
         conn = self._get_conn()
         row = conn.execute(
             """SELECT * FROM trust_scores

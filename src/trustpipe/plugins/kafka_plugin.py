@@ -20,9 +20,9 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
-import json
-from typing import Any, Optional
+from typing import Any
 
 from trustpipe.core.engine import TrustPipe
 
@@ -60,9 +60,14 @@ class TrackedConsumer:
             if self._batch_count[topic] == 1 or self._batch_count[topic] % 1000 == 0:
                 try:
                     value = msg.value()
-                    fingerprint = hashlib.sha256(value if isinstance(value, bytes) else str(value).encode()).hexdigest()
+                    hashlib.sha256(
+                        value if isinstance(value, bytes) else str(value).encode()
+                    ).hexdigest()
                     self._tp.track(
-                        {"row_count": self._batch_count[topic], "message_size": len(value) if value else 0},
+                        {
+                            "row_count": self._batch_count[topic],
+                            "message_size": len(value) if value else 0,
+                        },
                         name=f"kafka:{topic}",
                         source=f"kafka://{topic}/{msg.partition()}/{msg.offset()}",
                         tags=["kafka", "consumer"],
@@ -83,7 +88,7 @@ class TrackedConsumer:
     def close(self) -> None:
         # Track final batch counts before closing
         for topic, count in self._batch_count.items():
-            try:
+            with contextlib.suppress(Exception):
                 self._tp.track(
                     {"row_count": count},
                     name=f"kafka:{topic}",
@@ -91,8 +96,6 @@ class TrackedConsumer:
                     tags=["kafka", "consumer", "session-end"],
                     metadata={"topic": topic, "total_consumed": count},
                 )
-            except Exception:
-                pass
         self._consumer.close()
 
     def __getattr__(self, name: str) -> Any:

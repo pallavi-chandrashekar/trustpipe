@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from trustpipe.core.config import TrustPipeConfig
 
@@ -22,7 +22,7 @@ class DriftResult:
 class DriftDetector:
     """Wraps evidently for drift detection. Falls back to simple stats."""
 
-    def __init__(self, config: Optional[TrustPipeConfig] = None) -> None:
+    def __init__(self, config: TrustPipeConfig | None = None) -> None:
         self._config = config or TrustPipeConfig()
 
     def detect(self, reference: Any, current: Any) -> DriftResult:
@@ -43,9 +43,7 @@ class DriftDetector:
 
         drift_info = result_dict["metrics"][0]["result"]
         drifted = [
-            col
-            for col, info in drift_info["drift_by_columns"].items()
-            if info["drift_detected"]
+            col for col, info in drift_info["drift_by_columns"].items() if info["drift_detected"]
         ]
         total = len(drift_info["drift_by_columns"])
 
@@ -64,7 +62,9 @@ class DriftDetector:
 
             if not isinstance(reference, pd.DataFrame) or not isinstance(current, pd.DataFrame):
                 return DriftResult(
-                    drifted_columns=[], total_columns=0, drift_fraction=0.0,
+                    drifted_columns=[],
+                    total_columns=0,
+                    drift_fraction=0.0,
                     test_method="skipped (not DataFrames)",
                 )
 
@@ -74,7 +74,9 @@ class DriftDetector:
 
             if len(common_cols) == 0:
                 return DriftResult(
-                    drifted_columns=[], total_columns=0, drift_fraction=0.0,
+                    drifted_columns=[],
+                    total_columns=0,
+                    drift_fraction=0.0,
                     test_method="skipped (no common numeric columns)",
                 )
 
@@ -112,6 +114,8 @@ class DriftDetector:
 
         except ImportError:
             return DriftResult(
-                drifted_columns=[], total_columns=0, drift_fraction=0.0,
+                drifted_columns=[],
+                total_columns=0,
+                drift_fraction=0.0,
                 test_method="skipped (pandas not available)",
             )

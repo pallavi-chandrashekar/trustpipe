@@ -14,8 +14,9 @@ Usage in an Airflow DAG:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Optional
+from typing import Any
 
 from trustpipe.core.engine import TrustPipe
 
@@ -23,10 +24,10 @@ from trustpipe.core.engine import TrustPipe
 def trustpipe_task(
     tp: TrustPipe,
     *,
-    name: Optional[str] = None,
-    inputs: Optional[list[str]] = None,
-    outputs: Optional[list[str]] = None,
-    tags: Optional[list[str]] = None,
+    name: str | None = None,
+    inputs: list[str] | None = None,
+    outputs: list[str] | None = None,
+    tags: list[str] | None = None,
 ) -> Callable:
     """Decorator that wraps an Airflow @task with provenance tracking.
 
@@ -93,9 +94,9 @@ class AirflowPlugin:
     def track(
         self,
         *,
-        name: Optional[str] = None,
-        inputs: Optional[list[str]] = None,
-        tags: Optional[list[str]] = None,
+        name: str | None = None,
+        inputs: list[str] | None = None,
+        tags: list[str] | None = None,
     ) -> Callable:
         """Decorator for tracking a single Airflow task."""
         return trustpipe_task(self._tp, name=name, inputs=inputs, tags=tags)

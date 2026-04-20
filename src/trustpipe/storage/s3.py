@@ -14,8 +14,6 @@ Structure:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from typing import Optional
 
 from trustpipe.core.exceptions import StorageError
 from trustpipe.provenance.record import ProvenanceRecord
@@ -35,7 +33,7 @@ class S3Backend(StorageBackend):
         self,
         bucket: str,
         prefix: str = "trustpipe",
-        region: Optional[str] = None,
+        region: str | None = None,
     ) -> None:
         self._bucket = bucket
         self._prefix = prefix
@@ -46,8 +44,8 @@ class S3Backend(StorageBackend):
         if self._client is None:
             try:
                 import boto3
-            except ImportError:
-                raise ImportError("S3 backend requires boto3: pip install trustpipe[s3]")
+            except ImportError as e:
+                raise ImportError("S3 backend requires boto3: pip install trustpipe[s3]") from e
             kwargs = {}
             if self._region:
                 kwargs["region_name"] = self._region
@@ -59,12 +57,13 @@ class S3Backend(StorageBackend):
 
     def _put_json(self, key: str, data: dict) -> None:
         self._get_client().put_object(
-            Bucket=self._bucket, Key=key,
+            Bucket=self._bucket,
+            Key=key,
             Body=json.dumps(data, default=str).encode(),
             ContentType="application/json",
         )
 
-    def _get_json(self, key: str) -> Optional[dict]:
+    def _get_json(self, key: str) -> dict | None:
         try:
             resp = self._get_client().get_object(Bucket=self._bucket, Key=key)
             return json.loads(resp["Body"].read().decode())
@@ -101,7 +100,7 @@ class S3Backend(StorageBackend):
         existing["ids"].append(record.id)
         self._put_json(index_key, existing)
 
-    def load_provenance_record(self, record_id: str) -> Optional[ProvenanceRecord]:
+    def load_provenance_record(self, record_id: str) -> ProvenanceRecord | None:
         # Try default project first, then scan
         for project in self._list_projects():
             key = self._key(project, "provenance", f"{record_id}.json")
@@ -110,7 +109,9 @@ class S3Backend(StorageBackend):
                 return ProvenanceRecord.from_dict(data)
         return None
 
-    def query_provenance_by_name(self, name: str, project: str = "default") -> list[ProvenanceRecord]:
+    def query_provenance_by_name(
+        self, name: str, project: str = "default"
+    ) -> list[ProvenanceRecord]:
         index_key = self._key(project, "indexes", "name", f"{name}.json")
         index_data = self._get_json(index_key)
         if not index_data:
@@ -156,7 +157,7 @@ class S3Backend(StorageBackend):
             existing["ids"].append(score_data["id"])
             self._put_json(index_key, existing)
 
-    def load_latest_trust_score(self, dataset_name: str, project: str = "default") -> Optional[dict]:
+    def load_latest_trust_score(self, dataset_name: str, project: str = "default") -> dict | None:
         index_key = self._key(project, "indexes", "trust", f"{dataset_name}.json")
         index_data = self._get_json(index_key)
         if not index_data or not index_data.get("ids"):
@@ -180,7 +181,9 @@ class S3Backend(StorageBackend):
         prefix = self._key(project, "provenance") + "/"
         return len(self._list_keys(prefix))
 
-    def get_latest_records(self, project: str = "default", limit: int = 10) -> list[ProvenanceRecord]:
+    def get_latest_records(
+        self, project: str = "default", limit: int = 10
+    ) -> list[ProvenanceRecord]:
         prefix = self._key(project, "provenance") + "/"
         keys = sorted(self._list_keys(prefix), reverse=True)[:limit]
         records = []

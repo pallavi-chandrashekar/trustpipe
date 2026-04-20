@@ -10,7 +10,7 @@ import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from trustpipe.core.config import TrustPipeConfig
 from trustpipe.provenance.record import ProvenanceRecord
@@ -21,15 +21,15 @@ class DimensionContext:
     """Context passed to each dimension calculator."""
 
     config: TrustPipeConfig
-    provenance_record: Optional[ProvenanceRecord] = None
+    provenance_record: ProvenanceRecord | None = None
     chain_length: int = 0
-    data_timestamp: Optional[datetime] = None
-    created_at: Optional[datetime] = None
+    data_timestamp: datetime | None = None
+    created_at: datetime | None = None
     reference_data: Any = None
-    previous_columns: Optional[list[str]] = None
-    previous_dtypes: Optional[dict[str, str]] = None
-    historical_row_count: Optional[int] = None
-    _stats_cache: Optional[dict[str, Any]] = field(default=None, repr=False)
+    previous_columns: list[str] | None = None
+    previous_dtypes: dict[str, str] | None = None
+    historical_row_count: int | None = None
+    _stats_cache: dict[str, Any] | None = field(default=None, repr=False)
 
     def compute_stats(self, data: Any) -> dict[str, Any]:
         """Lazy-compute data statistics, cached."""
@@ -134,7 +134,11 @@ class Freshness(Dimension):
         age_days = None
         if timestamp:
             age_days = round((datetime.now(timezone.utc) - timestamp).total_seconds() / 86400, 1)
-        return {"score": score, "age_days": age_days, "half_life": context.config.freshness_half_life_days}
+        return {
+            "score": score,
+            "age_days": age_days,
+            "half_life": context.config.freshness_half_life_days,
+        }
 
 
 class Completeness(Dimension):
@@ -160,7 +164,7 @@ class Completeness(Dimension):
         return max(0.0, min(completeness, 1.0))
 
     def explain(self, score: float, context: DimensionContext) -> dict[str, Any]:
-        stats = context.compute_stats(context) if hasattr(context, 'compute_stats') else {}
+        stats = context.compute_stats(context) if hasattr(context, "compute_stats") else {}
         return {"score": score, "null_ratio_mean": stats.get("null_ratio_mean")}
 
 
@@ -223,7 +227,9 @@ class Drift(Dimension):
                 common = ref_means.index.intersection(cur_means.index)
                 if len(common) == 0:
                     return 0.7
-                diffs = ((cur_means[common] - ref_means[common]) / ref_means[common].clip(lower=1e-10)).abs()
+                diffs = (
+                    (cur_means[common] - ref_means[common]) / ref_means[common].clip(lower=1e-10)
+                ).abs()
                 drift_frac = (diffs > 0.2).mean()
                 return max(0.0, 1.0 - float(drift_frac))
         except (ImportError, Exception):

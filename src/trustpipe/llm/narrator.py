@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from trustpipe.compliance.schemas import Article10Metadata, ComplianceGap
 from trustpipe.llm.providers import LLMProvider
 
@@ -21,7 +19,8 @@ def generate_compliance_narrative(
     """
     prompt = f"""You are writing an EU AI Act Article 10 compliance narrative for a dataset called "{dataset_name}".
 
-Based on the following structured data, write a clear, professional 3-5 paragraph narrative suitable for regulatory submission. Focus on what is well-documented, acknowledge gaps honestly, and suggest next steps.
+Based on the following structured data, write a clear, professional 3-5 paragraph narrative
+suitable for regulatory submission. Focus on what is documented, acknowledge gaps, and suggest next steps.
 
 **Data Summary:**
 - Sources: {len(metadata.data_sources)} documented
@@ -30,12 +29,12 @@ Based on the following structured data, write a clear, professional 3-5 paragrap
 - Trust score: {metadata.trust_score}/100 ({metadata.trust_grade})
 - Completeness: {metadata.quality.completeness_score:.0%}
 - Consistency: {metadata.quality.consistency_score:.0%}
-- Intended use: {metadata.intended_use or 'Not documented'}
-- Bias methodology: {metadata.bias.methodology or 'Not documented'}
-- Governance owner: {metadata.process.governance_owner or 'Not assigned'}
+- Intended use: {metadata.intended_use or "Not documented"}
+- Bias methodology: {metadata.bias.methodology or "Not documented"}
+- Governance owner: {metadata.process.governance_owner or "Not assigned"}
 
 **Compliance Gaps ({len(gaps)} total):**
-{chr(10).join(f'- [{g.severity}] {g.article_ref}: {g.description}' for g in gaps)}
+{chr(10).join(f"- [{g.severity}] {g.article_ref}: {g.description}" for g in gaps)}
 
 Write the narrative in professional English. Do not invent data — only reference what is provided above."""
 
@@ -50,9 +49,13 @@ def generate_gap_remediation_plan(
     if not gaps:
         return "No compliance gaps identified. All Article 10 requirements are met."
 
-    prompt = f"""You are a data governance advisor. Create a prioritized remediation plan for these EU AI Act Article 10 compliance gaps:
+    gap_lines = "\n".join(
+        f"- [{g.severity}] {g.article_ref}: {g.description} → {g.recommendation}" for g in gaps
+    )
+    prompt = f"""You are a data governance advisor. Create a prioritized remediation plan \
+for these EU AI Act Article 10 compliance gaps:
 
-{chr(10).join(f'- [{g.severity}] {g.article_ref}: {g.description} → Recommendation: {g.recommendation}' for g in gaps)}
+{gap_lines}
 
 Format as a numbered action plan ordered by priority (CRITICAL first). For each item include:
 1. Action to take

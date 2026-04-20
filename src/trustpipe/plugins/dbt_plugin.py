@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from trustpipe.core.engine import TrustPipe
 from trustpipe.provenance.record import ProvenanceRecord
@@ -77,7 +77,7 @@ class DbtPlugin:
         nodes = manifest.get("nodes", {})
         processed: set[str] = set()
 
-        def process_node(unique_id: str) -> Optional[ProvenanceRecord]:
+        def process_node(unique_id: str) -> ProvenanceRecord | None:
             if unique_id in processed:
                 return None
             if unique_id not in nodes:
@@ -128,7 +128,7 @@ class DbtPlugin:
     def import_run_results(
         self,
         results_path: str | Path,
-        manifest_path: Optional[str | Path] = None,
+        manifest_path: str | Path | None = None,
     ) -> list[dict[str, Any]]:
         """Import dbt run_results.json to record execution metadata.
 

@@ -5,41 +5,42 @@ Launch: trustpipe serve --port 8000
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from trustpipe._version import __version__
 from trustpipe.core.engine import TrustPipe
 
-
 # ── Request/Response Models ──────────────────────────────────
+
 
 class TrackRequest(BaseModel):
     name: str
-    source: Optional[str] = None
-    parent: Optional[str] = None
-    parents: Optional[list[str]] = None
-    metadata: Optional[dict[str, Any]] = None
-    tags: Optional[list[str]] = None
-    data: dict[str, Any] = Field(default_factory=dict, description="Data stats (row_count, columns, etc.)")
+    source: str | None = None
+    parent: str | None = None
+    parents: list[str] | None = None
+    metadata: dict[str, Any] | None = None
+    tags: list[str] | None = None
+    data: dict[str, Any] = Field(
+        default_factory=dict, description="Data stats (row_count, columns, etc.)"
+    )
 
 
 class ScoreRequest(BaseModel):
     name: str
-    checks: Optional[list[str]] = None
+    checks: list[str] | None = None
 
 
 class ComplyRequest(BaseModel):
     regulation: str = "eu-ai-act-article-10"
     output_format: str = "markdown"
-    user_metadata: Optional[dict[str, Any]] = None
+    user_metadata: dict[str, Any] | None = None
 
 
 # ── API Factory ──────────────────────────────────────────────
+
 
 def create_api(tp: TrustPipe) -> FastAPI:
     """Create the FastAPI application."""
@@ -88,13 +89,13 @@ def create_api(tp: TrustPipe) -> FastAPI:
         return {"tree": graph.to_tree_string()}
 
     @app.get("/verify")
-    async def verify(record_id: Optional[str] = None):
+    async def verify(record_id: str | None = None):
         return tp.verify(record_id)
 
     # ── Trust ─────────────────────────────────────────────
 
     @app.get("/score/{name}")
-    async def score(name: str, checks: Optional[str] = None):
+    async def score(name: str, checks: str | None = None):
         chain = tp.trace(name)
         if not chain:
             raise HTTPException(404, f"No provenance records found for '{name}'")
@@ -132,6 +133,7 @@ def create_api(tp: TrustPipe) -> FastAPI:
         content = tp.comply(name, regulation=regulation, output_format=output_format)
         if output_format == "json":
             import json
+
             return json.loads(content)
         return {"content": content, "format": output_format}
 
@@ -148,6 +150,7 @@ def create_api(tp: TrustPipe) -> FastAPI:
         )
         if req.output_format == "json":
             import json
+
             return json.loads(content)
         return {"content": content, "format": req.output_format}
 
@@ -168,5 +171,6 @@ def run_api(
 ) -> None:
     """Launch the API server."""
     import uvicorn
+
     app = create_api(tp)
     uvicorn.run(app, host=host, port=port)

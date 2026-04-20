@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import PurePosixPath
-from typing import Any, Optional
+from typing import Any
 
 from trustpipe.core.engine import TrustPipe
 from trustpipe.provenance.record import ProvenanceRecord
@@ -36,8 +36,8 @@ class TrustPipePlugin(ABC):
         source: str,
         data: Any,
         *,
-        name: Optional[str] = None,
-        metadata: Optional[dict] = None,
+        name: str | None = None,
+        metadata: dict | None = None,
     ) -> ProvenanceRecord:
         resolved_name = name or self._infer_name(source)
         return self._tp.track(data, name=resolved_name, source=source, metadata=metadata)
@@ -47,9 +47,9 @@ class TrustPipePlugin(ABC):
         destination: str,
         data: Any,
         *,
-        name: Optional[str] = None,
-        parents: Optional[list[str]] = None,
-        metadata: Optional[dict] = None,
+        name: str | None = None,
+        parents: list[str] | None = None,
+        metadata: dict | None = None,
     ) -> ProvenanceRecord:
         resolved_name = name or self._infer_name(destination)
         return self._tp.track(

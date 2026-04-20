@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -27,9 +26,9 @@ class QualityMetrics(BaseModel):
     freshness_score: float = 0.0
     accuracy_assessment: str = ""
     representativeness: str = ""
-    error_rate: Optional[float] = None
-    row_count: Optional[int] = None
-    column_count: Optional[int] = None
+    error_rate: float | None = None
+    row_count: int | None = None
+    column_count: int | None = None
 
 
 class BiasAssessment(BaseModel):
@@ -87,7 +86,7 @@ class Article10Metadata(BaseModel):
     process: ProcessDocumentation = Field(default_factory=ProcessDocumentation)
 
     # Computed
-    trust_score: Optional[int] = None
+    trust_score: int | None = None
     trust_grade: str = ""
     compliance_gaps: list[str] = Field(default_factory=list)
     assessment_date: str = ""

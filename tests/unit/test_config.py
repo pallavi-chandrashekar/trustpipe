@@ -1,7 +1,5 @@
 """Tests for configuration loading."""
 
-import os
-
 from trustpipe.core.config import TrustPipeConfig
 
 

@@ -24,9 +24,9 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Any, Optional
-from urllib.request import Request, urlopen
+from typing import Any
 from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 
 class Alert(ABC):
@@ -41,7 +41,7 @@ class Alert(ABC):
 class WebhookAlert(Alert):
     """Send alerts to a generic webhook URL (POST JSON)."""
 
-    def __init__(self, url: str, headers: Optional[dict[str, str]] = None) -> None:
+    def __init__(self, url: str, headers: dict[str, str] | None = None) -> None:
         self._url = url
         self._headers = headers or {}
 
@@ -70,9 +70,11 @@ class SlackAlert(Alert):
             score = message.get("score", 0)
             threshold = message.get("threshold", 70)
             grade = message.get("grade", "?")
-            text = f":warning: *TrustPipe Alert — Score Drop*\n\n" \
-                   f"Dataset: `{dataset}`\n" \
-                   f"Score: *{score}/100* ({grade}) — below threshold of {threshold}\n"
+            text = (
+                f":warning: *TrustPipe Alert — Score Drop*\n\n"
+                f"Dataset: `{dataset}`\n"
+                f"Score: *{score}/100* ({grade}) — below threshold of {threshold}\n"
+            )
             if message.get("warnings"):
                 text += "\nIssues:\n"
                 for w in message["warnings"][:5]:
@@ -81,10 +83,12 @@ class SlackAlert(Alert):
         elif event == "integrity_failure":
             failed = message.get("failed_count", 0)
             total = message.get("total", 0)
-            text = f":rotating_light: *TrustPipe Alert — Integrity Failure*\n\n" \
-                   f"Project: `{message.get('project', 'default')}`\n" \
-                   f"Failed records: *{failed}/{total}*\n" \
-                   f"Chain may be compromised. Run `trustpipe verify` for details."
+            text = (
+                f":rotating_light: *TrustPipe Alert — Integrity Failure*\n\n"
+                f"Project: `{message.get('project', 'default')}`\n"
+                f"Failed records: *{failed}/{total}*\n"
+                f"Chain may be compromised. Run `trustpipe verify` for details."
+            )
 
         else:
             text = f":bell: *TrustPipe Alert*\n\n```{json.dumps(message, indent=2, default=str)}```"
@@ -92,7 +96,9 @@ class SlackAlert(Alert):
         slack_payload = {"text": text}
         try:
             data = json.dumps(slack_payload).encode()
-            req = Request(self._url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+            req = Request(
+                self._url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+            )
             with urlopen(req, timeout=10) as resp:
                 return resp.status == 200
         except (URLError, Exception):

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import click
 from rich.console import Console
@@ -13,10 +13,13 @@ from rich.tree import Tree
 
 from trustpipe._version import __version__
 
+if TYPE_CHECKING:
+    from trustpipe.core.engine import TrustPipe
+
 console = Console()
 
 
-def _get_tp(ctx: click.Context) -> "TrustPipe":
+def _get_tp(ctx: click.Context) -> TrustPipe:
     """Lazy-load TrustPipe instance from CLI context."""
     from trustpipe import TrustPipe
     from trustpipe.core.config import TrustPipeConfig
@@ -38,7 +41,7 @@ def _get_tp(ctx: click.Context) -> "TrustPipe":
 @click.option("--config", "-c", "config_path", type=click.Path(), help="Path to config YAML")
 @click.option("--db", "db_path", type=click.Path(), help="Path to SQLite database")
 @click.pass_context
-def cli(ctx: click.Context, project: str, config_path: Optional[str], db_path: Optional[str]) -> None:
+def cli(ctx: click.Context, project: str, config_path: str | None, db_path: str | None) -> None:
     """TrustPipe — AI Data Supply Chain Trust & Provenance."""
     ctx.ensure_object(dict)
     ctx.obj["project"] = project
@@ -51,7 +54,6 @@ def cli(ctx: click.Context, project: str, config_path: Optional[str], db_path: O
 @click.pass_context
 def init(ctx: click.Context, project: str) -> None:
     """Initialize a TrustPipe project."""
-    from trustpipe import TrustPipe
     from trustpipe.core.config import DEFAULT_CONFIG_DIR
 
     ctx.obj["project"] = project
@@ -71,9 +73,7 @@ def init(ctx: click.Context, project: str) -> None:
 @cli.command()
 @click.argument("dataset")
 @click.option("--depth", "-d", type=int, default=0, help="Max ancestor depth (0=full)")
-@click.option(
-    "--format", "fmt", type=click.Choice(["tree", "table", "json"]), default="tree"
-)
+@click.option("--format", "fmt", type=click.Choice(["tree", "table", "json"]), default="tree")
 @click.pass_context
 def trace(ctx: click.Context, dataset: str, depth: int, fmt: str) -> None:
     """Show provenance chain for a dataset."""
@@ -128,7 +128,7 @@ def trace(ctx: click.Context, dataset: str, depth: int, fmt: str) -> None:
 @cli.command()
 @click.option("--record", "-r", "record_id", help="Verify specific record ID")
 @click.pass_context
-def verify(ctx: click.Context, record_id: Optional[str]) -> None:
+def verify(ctx: click.Context, record_id: str | None) -> None:
     """Verify Merkle chain integrity."""
     tp = _get_tp(ctx)
     result = tp.verify(record_id)
@@ -182,11 +182,15 @@ def status(ctx: click.Context) -> None:
 
 @cli.command()
 @click.argument("dataset")
-@click.option("--reference", "-r", type=click.Path(exists=True), help="Reference file for drift comparison")
+@click.option(
+    "--reference", "-r", type=click.Path(exists=True), help="Reference file for drift comparison"
+)
 @click.option("--checks", help="Comma-separated dimensions to evaluate")
 @click.option("--format", "fmt", type=click.Choice(["table", "json", "brief"]), default="table")
 @click.pass_context
-def score(ctx: click.Context, dataset: str, reference: Optional[str], checks: Optional[str], fmt: str) -> None:
+def score(
+    ctx: click.Context, dataset: str, reference: str | None, checks: str | None, fmt: str
+) -> None:
     """Compute trust score for a dataset.
 
     DATASET can be a name in the provenance chain or a file path.
@@ -223,7 +227,9 @@ def score(ctx: click.Context, dataset: str, reference: Optional[str], checks: Op
         # Score by provenance name — use stored stats
         chain = tp.trace(dataset)
         if not chain:
-            console.print(f"[yellow]No data found for '{dataset}'. Provide a file path or tracked name.[/yellow]")
+            console.print(
+                f"[yellow]No data found for '{dataset}'. Provide a file path or tracked name.[/yellow]"
+            )
             return
         latest = chain[-1]
         result = tp.score(
@@ -236,11 +242,19 @@ def score(ctx: click.Context, dataset: str, reference: Optional[str], checks: Op
     if fmt == "json":
         click.echo(json.dumps(result.to_dict(), indent=2, default=str))
     elif fmt == "brief":
-        grade_colors = {"A+": "green", "A": "green", "B": "blue", "C": "yellow", "D": "red", "F": "red"}
+        grade_colors = {
+            "A+": "green",
+            "A": "green",
+            "B": "blue",
+            "C": "yellow",
+            "D": "red",
+            "F": "red",
+        }
         color = grade_colors.get(result.grade, "white")
         console.print(f"[{color}]{result.composite}/100 ({result.grade})[/{color}] {dataset}")
     else:
         from trustpipe.cli.formatters import format_trust_score
+
         format_trust_score(result)
 
 
@@ -257,7 +271,9 @@ def scan(ctx: click.Context, target: str, threshold: float, fmt: str) -> None:
     try:
         import pandas as pd
     except ImportError:
-        console.print("[red]pandas is required for scan. Install: pip install trustpipe[trust][/red]")
+        console.print(
+            "[red]pandas is required for scan. Install: pip install trustpipe[trust][/red]"
+        )
         return
 
     if target.endswith(".csv"):
@@ -277,19 +293,24 @@ def scan(ctx: click.Context, target: str, threshold: float, fmt: str) -> None:
         click.echo(json.dumps(result.to_dict(), indent=2))
     else:
         from trustpipe.cli.formatters import format_scan_result
+
         format_scan_result(result)
 
 
 @cli.command()
 @click.argument("dataset")
 @click.option(
-    "--regulation", "-r", default="eu-ai-act-article-10",
+    "--regulation",
+    "-r",
+    default="eu-ai-act-article-10",
     type=click.Choice(["eu-ai-act-article-10", "datacard", "audit-log"]),
 )
 @click.option("--format", "fmt", type=click.Choice(["markdown", "json"]), default="markdown")
 @click.option("--output", "-o", "output_path", type=click.Path(), help="Write report to file")
 @click.pass_context
-def comply(ctx: click.Context, dataset: str, regulation: str, fmt: str, output_path: Optional[str]) -> None:
+def comply(
+    ctx: click.Context, dataset: str, regulation: str, fmt: str, output_path: str | None
+) -> None:
     """Generate a compliance report for a dataset.
 
     Requires the dataset to have provenance records.
@@ -323,7 +344,7 @@ def comply(ctx: click.Context, dataset: str, regulation: str, fmt: str, output_p
 @click.option("--format", "fmt", type=click.Choice(["json", "csv"]), default="json")
 @click.option("--output", "-o", "output_path", type=click.Path(), help="Write to file")
 @click.pass_context
-def export_cmd(ctx: click.Context, fmt: str, output_path: Optional[str]) -> None:
+def export_cmd(ctx: click.Context, fmt: str, output_path: str | None) -> None:
     """Export all provenance records."""
     tp = _get_tp(ctx)
     records = tp._storage.get_latest_records(tp.project, limit=100000)
@@ -338,11 +359,24 @@ def export_cmd(ctx: click.Context, fmt: str, output_path: Optional[str]) -> None
         # CSV
         import csv
         import io
+
         buf = io.StringIO()
         writer = csv.writer(buf)
-        writer.writerow(["id", "name", "source", "row_count", "fingerprint", "merkle_root", "created_at"])
+        writer.writerow(
+            ["id", "name", "source", "row_count", "fingerprint", "merkle_root", "created_at"]
+        )
         for r in records:
-            writer.writerow([r.id, r.name, r.source, r.row_count, r.fingerprint[:16], r.merkle_root[:16], r.created_at.isoformat()])
+            writer.writerow(
+                [
+                    r.id,
+                    r.name,
+                    r.source,
+                    r.row_count,
+                    r.fingerprint[:16],
+                    r.merkle_root[:16],
+                    r.created_at.isoformat(),
+                ]
+            )
         data = buf.getvalue()
 
     if output_path:
@@ -393,7 +427,7 @@ def serve(ctx: click.Context, host: str, port: int) -> None:
 @click.option("--threshold", "-t", default=70, type=int, help="Minimum trust score (0-100)")
 @click.option("--checks", help="Comma-separated dimensions to evaluate")
 @click.pass_context
-def gate(ctx: click.Context, dataset: str, threshold: int, checks: Optional[str]) -> None:
+def gate(ctx: click.Context, dataset: str, threshold: int, checks: str | None) -> None:
     """CI/CD trust gate — exit non-zero if score < threshold.
 
     Use in GitHub Actions or any CI pipeline:
@@ -415,10 +449,14 @@ def gate(ctx: click.Context, dataset: str, threshold: int, checks: Optional[str]
     )
 
     if score.composite >= threshold:
-        console.print(f"[green]PASS[/green] {dataset}: {score.composite}/100 ({score.grade}) >= {threshold}")
+        console.print(
+            f"[green]PASS[/green] {dataset}: {score.composite}/100 ({score.grade}) >= {threshold}"
+        )
         raise SystemExit(0)
     else:
-        console.print(f"[red]FAIL[/red] {dataset}: {score.composite}/100 ({score.grade}) < {threshold}")
+        console.print(
+            f"[red]FAIL[/red] {dataset}: {score.composite}/100 ({score.grade}) < {threshold}"
+        )
         for w in score.warnings:
             console.print(f"  - {w}")
         raise SystemExit(1)

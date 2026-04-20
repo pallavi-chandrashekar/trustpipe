@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from trustpipe.core.config import TrustPipeConfig
 from trustpipe.core.exceptions import ProvenanceError
@@ -12,6 +12,11 @@ from trustpipe.provenance.lineage import LineageGraph
 from trustpipe.provenance.record import ProvenanceRecord, fingerprint_data
 from trustpipe.storage.base import StorageBackend
 from trustpipe.storage.sqlite import SQLiteBackend
+
+if TYPE_CHECKING:
+    from trustpipe.plugins.pandas_plugin import PandasPlugin
+    from trustpipe.plugins.spark_plugin import SparkPlugin
+    from trustpipe.trust.scorer import ScanResult, TrustScore
 
 
 class TrustPipe:
@@ -28,10 +33,10 @@ class TrustPipe:
     def __init__(
         self,
         *,
-        config: Optional[TrustPipeConfig] = None,
-        storage: Optional[StorageBackend] = None,
+        config: TrustPipeConfig | None = None,
+        storage: StorageBackend | None = None,
         project: str = "default",
-        db_path: Optional[Union[str, Path]] = None,
+        db_path: str | Path | None = None,
     ) -> None:
         self._config = config or TrustPipeConfig.auto_detect()
         self._project = project
@@ -48,11 +53,11 @@ class TrustPipe:
         data: Any,
         *,
         name: str,
-        source: Optional[str] = None,
-        parent: Optional[str] = None,
-        parents: Optional[list[str]] = None,
-        metadata: Optional[dict[str, Any]] = None,
-        tags: Optional[list[str]] = None,
+        source: str | None = None,
+        parent: str | None = None,
+        parents: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        tags: list[str] | None = None,
     ) -> ProvenanceRecord:
         """Record a data asset in the provenance chain.
 
@@ -104,7 +109,7 @@ class TrustPipe:
         """Return full provenance chain for a named dataset, root to leaf."""
         return self._chain.get_chain(name)
 
-    def lineage(self, name: str) -> Optional[LineageGraph]:
+    def lineage(self, name: str) -> LineageGraph | None:
         """Return the lineage DAG for the latest version of a named dataset."""
         chain = self._chain.get_chain(name)
         if not chain:
@@ -112,7 +117,7 @@ class TrustPipe:
         latest = chain[-1]
         return LineageGraph.build(latest.id, self._storage)
 
-    def verify(self, record_id: Optional[str] = None) -> dict[str, Any]:
+    def verify(self, record_id: str | None = None) -> dict[str, Any]:
         """Verify Merkle chain integrity.
 
         If record_id is given, verify that specific record.
@@ -148,10 +153,10 @@ class TrustPipe:
         self,
         data: Any,
         *,
-        name: Optional[str] = None,
+        name: str | None = None,
         reference: Any = None,
-        checks: Optional[list[str]] = None,
-    ) -> "TrustScore":
+        checks: list[str] | None = None,
+    ) -> TrustScore:
         """Compute trust score (0-100) for a data asset.
 
         Args:
@@ -199,18 +204,20 @@ class TrustPipe:
 
         # Store the score
         if name:
-            self._storage.save_trust_score({
-                "id": result.id,
-                "record_id": result.record_id,
-                "dataset_name": name,
-                "composite": result.composite,
-                "grade": result.grade,
-                "dimensions": [d.__dict__ for d in result.dimensions],
-                "warnings": result.warnings,
-                "computed_at": result.computed_at,
-                "config_snapshot": self._config.get_weights(),
-                "project": self._project,
-            })
+            self._storage.save_trust_score(
+                {
+                    "id": result.id,
+                    "record_id": result.record_id,
+                    "dataset_name": name,
+                    "composite": result.composite,
+                    "grade": result.grade,
+                    "dimensions": [d.__dict__ for d in result.dimensions],
+                    "warnings": result.warnings,
+                    "computed_at": result.computed_at,
+                    "config_snapshot": self._config.get_weights(),
+                    "project": self._project,
+                }
+            )
 
         return result
 
@@ -218,8 +225,8 @@ class TrustPipe:
         self,
         data: Any,
         *,
-        detectors: Optional[list[str]] = None,
-    ) -> "ScanResult":
+        detectors: list[str] | None = None,
+    ) -> ScanResult:
         """Deep scan for data poisoning and anomalies.
 
         Args:
@@ -242,7 +249,7 @@ class TrustPipe:
         *,
         regulation: str = "eu-ai-act-article-10",
         output_format: str = "markdown",
-        user_metadata: Optional[dict[str, Any]] = None,
+        user_metadata: dict[str, Any] | None = None,
     ) -> str:
         """Generate a compliance report for a named dataset.
 
@@ -269,7 +276,7 @@ class TrustPipe:
 
     # ── Plugins ───────────────────────────────────────────────
 
-    def pandas(self) -> "PandasPlugin":
+    def pandas(self) -> PandasPlugin:
         """Activate Pandas auto-tracking. Returns plugin for manual control."""
         from trustpipe.plugins.pandas_plugin import PandasPlugin
 
@@ -277,7 +284,7 @@ class TrustPipe:
         plugin.activate()
         return plugin
 
-    def spark(self, spark_session: Any) -> "SparkPlugin":
+    def spark(self, spark_session: Any) -> SparkPlugin:
         """Activate Spark auto-tracking via DataFrameReader/Writer wrapping."""
         from trustpipe.plugins.spark_plugin import SparkPlugin
 

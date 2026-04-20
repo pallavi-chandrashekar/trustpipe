@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+
+if TYPE_CHECKING:
+    from trustpipe.trust.scorer import ScanResult, TrustScore
 
 console = Console()
 
 
-def format_trust_score(score: "TrustScore") -> None:
+def format_trust_score(score: TrustScore) -> None:
     """Print a beautifully formatted trust score."""
-    from trustpipe.trust.scorer import TrustScore
 
     # Grade color
     grade_colors = {"A+": "green", "A": "green", "B": "blue", "C": "yellow", "D": "red", "F": "red"}
@@ -66,9 +69,8 @@ def format_trust_score(score: "TrustScore") -> None:
                 console.print(f"  [dim]![/dim] {w}")
 
 
-def format_scan_result(result: "ScanResult") -> None:
+def format_scan_result(result: ScanResult) -> None:
     """Print a formatted scan result."""
-    from trustpipe.trust.scorer import ScanResult
 
     if result.flagged_count == 0:
         console.print("[green]\u2713[/green] No anomalies detected")

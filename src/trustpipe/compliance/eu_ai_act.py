@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from trustpipe.compliance.schemas import (
     Article10Metadata,
@@ -16,9 +16,9 @@ from trustpipe.provenance.record import ProvenanceRecord
 
 def build_article10_metadata(
     records: list[ProvenanceRecord],
-    trust_score: Optional[dict] = None,
-    verification_result: Optional[dict] = None,
-    user_metadata: Optional[dict[str, Any]] = None,
+    trust_score: dict | None = None,
+    verification_result: dict | None = None,
+    user_metadata: dict[str, Any] | None = None,
 ) -> Article10Metadata:
     """Build Article 10 metadata from provenance records and trust scores.
 
@@ -34,13 +34,15 @@ def build_article10_metadata(
     for r in records:
         if r.source and r.source not in seen_sources:
             seen_sources.add(r.source)
-            sources.append(DataSourceInfo(
-                uri=r.source,
-                description=r.metadata.get("description", ""),
-                collection_method=r.metadata.get("collection_method", ""),
-                geographic_origin=r.metadata.get("geographic_origin", ""),
-                owner=r.metadata.get("owner", ""),
-            ))
+            sources.append(
+                DataSourceInfo(
+                    uri=r.source,
+                    description=r.metadata.get("description", ""),
+                    collection_method=r.metadata.get("collection_method", ""),
+                    geographic_origin=r.metadata.get("geographic_origin", ""),
+                    owner=r.metadata.get("owner", ""),
+                )
+            )
 
     # Chain of custody from provenance records
     chain = [
@@ -102,89 +104,111 @@ def assess_compliance_gaps(metadata: Article10Metadata) -> list[ComplianceGap]:
 
     # Art. 10(2)(a): Data sources and lineage
     if not metadata.data_sources:
-        gaps.append(ComplianceGap(
-            severity="CRITICAL",
-            article_ref="Art. 10(2)(a)",
-            description="No data sources documented",
-            recommendation="Add source URIs when tracking data: tp.track(data, source='s3://...')",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="CRITICAL",
+                article_ref="Art. 10(2)(a)",
+                description="No data sources documented",
+                recommendation="Add source URIs when tracking data: tp.track(data, source='s3://...')",
+            )
+        )
     if not metadata.chain_of_custody:
-        gaps.append(ComplianceGap(
-            severity="CRITICAL",
-            article_ref="Art. 10(2)(a)",
-            description="No chain of custody / provenance lineage recorded",
-            recommendation="Track all pipeline stages with parent linkage: tp.track(data, parent=prev.id)",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="CRITICAL",
+                article_ref="Art. 10(2)(a)",
+                description="No chain of custody / provenance lineage recorded",
+                recommendation="Track all pipeline stages with parent linkage: tp.track(data, parent=prev.id)",
+            )
+        )
     if not metadata.merkle_chain_verified:
-        gaps.append(ComplianceGap(
-            severity="WARNING",
-            article_ref="Art. 10(2)(a)",
-            description="Merkle chain integrity not verified",
-            recommendation="Run: trustpipe verify",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="WARNING",
+                article_ref="Art. 10(2)(a)",
+                description="Merkle chain integrity not verified",
+                recommendation="Run: trustpipe verify",
+            )
+        )
 
     # Art. 10(2)(b): Quality metrics
     if metadata.quality.completeness_score < 0.7:
-        gaps.append(ComplianceGap(
-            severity="WARNING",
-            article_ref="Art. 10(2)(b)",
-            description=f"Low data completeness ({metadata.quality.completeness_score:.0%})",
-            recommendation="Investigate and reduce null values in the dataset",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="WARNING",
+                article_ref="Art. 10(2)(b)",
+                description=f"Low data completeness ({metadata.quality.completeness_score:.0%})",
+                recommendation="Investigate and reduce null values in the dataset",
+            )
+        )
     if not metadata.quality.accuracy_assessment:
-        gaps.append(ComplianceGap(
-            severity="WARNING",
-            article_ref="Art. 10(2)(b)",
-            description="No accuracy assessment methodology documented",
-            recommendation="Document how data accuracy is measured and validated",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="WARNING",
+                article_ref="Art. 10(2)(b)",
+                description="No accuracy assessment methodology documented",
+                recommendation="Document how data accuracy is measured and validated",
+            )
+        )
 
     # Art. 10(2)(c): Contextual appropriateness
     if not metadata.intended_use:
-        gaps.append(ComplianceGap(
-            severity="WARNING",
-            article_ref="Art. 10(2)(c)",
-            description="Intended use not documented",
-            recommendation="Specify the AI system's intended purpose and deployment context",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="WARNING",
+                article_ref="Art. 10(2)(c)",
+                description="Intended use not documented",
+                recommendation="Specify the AI system's intended purpose and deployment context",
+            )
+        )
     if not metadata.geographic_applicability:
-        gaps.append(ComplianceGap(
-            severity="INFO",
-            article_ref="Art. 10(2)(c)",
-            description="Geographic applicability not specified",
-            recommendation="Document which regions/populations the data represents",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="INFO",
+                article_ref="Art. 10(2)(c)",
+                description="Geographic applicability not specified",
+                recommendation="Document which regions/populations the data represents",
+            )
+        )
 
     # Art. 10(2)(f): Bias assessment
     if not metadata.bias.methodology:
-        gaps.append(ComplianceGap(
-            severity="CRITICAL",
-            article_ref="Art. 10(2)(f)",
-            description="No bias assessment methodology documented",
-            recommendation="Document methods used to detect and mitigate bias in training data",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="CRITICAL",
+                article_ref="Art. 10(2)(f)",
+                description="No bias assessment methodology documented",
+                recommendation="Document methods used to detect and mitigate bias in training data",
+            )
+        )
     if not metadata.bias.protected_attributes_checked:
-        gaps.append(ComplianceGap(
-            severity="WARNING",
-            article_ref="Art. 10(2)(f)",
-            description="No protected attributes checked for bias",
-            recommendation="Identify and test protected attributes (gender, age, ethnicity, etc.)",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="WARNING",
+                article_ref="Art. 10(2)(f)",
+                description="No protected attributes checked for bias",
+                recommendation="Identify and test protected attributes (gender, age, ethnicity, etc.)",
+            )
+        )
 
     # Art. 10(4): Data governance
     if not metadata.process.governance_owner:
-        gaps.append(ComplianceGap(
-            severity="WARNING",
-            article_ref="Art. 10(4)",
-            description="No data governance owner documented",
-            recommendation="Assign a responsible person/team for data governance oversight",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="WARNING",
+                article_ref="Art. 10(4)",
+                description="No data governance owner documented",
+                recommendation="Assign a responsible person/team for data governance oversight",
+            )
+        )
     if not metadata.process.preparation_methodology:
-        gaps.append(ComplianceGap(
-            severity="INFO",
-            article_ref="Art. 10(4)",
-            description="Data preparation methodology not documented",
-            recommendation="Document sampling, filtering, anonymization, and labeling procedures",
-        ))
+        gaps.append(
+            ComplianceGap(
+                severity="INFO",
+                article_ref="Art. 10(4)",
+                description="Data preparation methodology not documented",
+                recommendation="Document sampling, filtering, anonymization, and labeling procedures",
+            )
+        )
 
     return gaps

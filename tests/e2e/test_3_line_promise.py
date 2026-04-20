@@ -9,9 +9,10 @@ def test_three_line_promise(tmp_path):
     df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
 
     # === The 3 lines ===
-    from trustpipe import TrustPipe               # Line 1
+    from trustpipe import TrustPipe  # Line 1
+
     tp = TrustPipe(db_path=tmp_path / "test.db")  # Line 2
-    tp.track(df, name="my_data")                   # Line 3
+    tp.track(df, name="my_data")  # Line 3
 
     # === Verify provenance works ===
     chain = tp.trace("my_data")

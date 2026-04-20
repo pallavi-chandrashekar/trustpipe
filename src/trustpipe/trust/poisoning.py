@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from trustpipe.core.config import TrustPipeConfig
 from trustpipe.trust.scorer import ScanResult
@@ -16,17 +15,17 @@ class PoisoningDetector:
     simple statistical outlier detection via z-scores.
     """
 
-    def __init__(self, config: Optional[TrustPipeConfig] = None) -> None:
+    def __init__(self, config: TrustPipeConfig | None = None) -> None:
         self._config = config or TrustPipeConfig()
 
-    def scan(self, data: Any, detectors: Optional[list[str]] = None) -> ScanResult:
+    def scan(self, data: Any, detectors: list[str] | None = None) -> ScanResult:
         """Scan data for anomalies/poisoning."""
         try:
             return self._scan_pyod(data, detectors)
         except ImportError:
             return self._scan_zscore(data)
 
-    def _scan_pyod(self, data: Any, detectors: Optional[list[str]] = None) -> ScanResult:
+    def _scan_pyod(self, data: Any, detectors: list[str] | None = None) -> ScanResult:
         """Use PyOD Isolation Forest for anomaly detection."""
         import numpy as np
         import pandas as pd
@@ -38,7 +37,9 @@ class PoisoningDetector:
         numeric = data.select_dtypes(include="number")
         if numeric.empty:
             return ScanResult(
-                anomaly_fraction=0.0, flagged_count=0, total_count=len(data),
+                anomaly_fraction=0.0,
+                flagged_count=0,
+                total_count=len(data),
                 detector_used="skipped (no numeric columns)",
             )
 
@@ -73,14 +74,18 @@ class PoisoningDetector:
 
             if not isinstance(data, pd.DataFrame):
                 return ScanResult(
-                    anomaly_fraction=0.0, flagged_count=0, total_count=0,
+                    anomaly_fraction=0.0,
+                    flagged_count=0,
+                    total_count=0,
                     detector_used="skipped (not DataFrame)",
                 )
 
             numeric = data.select_dtypes(include="number")
             if numeric.empty:
                 return ScanResult(
-                    anomaly_fraction=0.0, flagged_count=0, total_count=len(data),
+                    anomaly_fraction=0.0,
+                    flagged_count=0,
+                    total_count=len(data),
                     detector_used="skipped (no numeric columns)",
                 )
 
@@ -106,6 +111,8 @@ class PoisoningDetector:
 
         except ImportError:
             return ScanResult(
-                anomaly_fraction=0.0, flagged_count=0, total_count=0,
+                anomaly_fraction=0.0,
+                flagged_count=0,
+                total_count=0,
                 detector_used="skipped (pandas not available)",
             )

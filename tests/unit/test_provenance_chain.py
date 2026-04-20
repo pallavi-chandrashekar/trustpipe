@@ -14,6 +14,7 @@ def test_track_creates_record(tp):
 
 def test_track_requires_name(tp):
     import pytest
+
     from trustpipe.core.exceptions import ProvenanceError
 
     with pytest.raises(ProvenanceError):

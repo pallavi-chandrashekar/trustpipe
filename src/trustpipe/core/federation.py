@@ -25,8 +25,8 @@ Usage:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any
 
 from trustpipe.core.engine import TrustPipe
 from trustpipe.provenance.record import ProvenanceRecord
@@ -38,7 +38,7 @@ class FederatedSearchResult:
 
     project: str
     records: list[ProvenanceRecord]
-    trust_score: Optional[dict] = None
+    trust_score: dict | None = None
 
 
 @dataclass
@@ -71,13 +71,15 @@ class Federation:
         for tp in self._instances:
             s = tp.status()
             v = tp.verify()
-            project_statuses.append({
-                "project": tp.project,
-                "record_count": s["record_count"],
-                "chain_length": s["chain_length"],
-                "chain_root": s["chain_root"],
-                "integrity": v["integrity"],
-            })
+            project_statuses.append(
+                {
+                    "project": tp.project,
+                    "record_count": s["record_count"],
+                    "chain_length": s["chain_length"],
+                    "chain_root": s["chain_root"],
+                    "integrity": v["integrity"],
+                }
+            )
             total_records += s["record_count"]
             total_chain += s["chain_length"]
             if v["integrity"] != "OK":
@@ -97,11 +99,13 @@ class Federation:
             chain = tp.trace(name)
             if chain:
                 score_data = tp._storage.load_latest_trust_score(name, tp.project)
-                results.append(FederatedSearchResult(
-                    project=tp.project,
-                    records=chain,
-                    trust_score=score_data,
-                ))
+                results.append(
+                    FederatedSearchResult(
+                        project=tp.project,
+                        records=chain,
+                        trust_score=score_data,
+                    )
+                )
         return results
 
     def trace(self, name: str) -> dict[str, list[ProvenanceRecord]]:
@@ -120,7 +124,7 @@ class Federation:
             results[tp.project] = tp.verify()
         return results
 
-    def score_all(self, name: str) -> dict[str, Optional[dict]]:
+    def score_all(self, name: str) -> dict[str, dict | None]:
         """Get latest trust score for a dataset across all projects."""
         scores = {}
         for tp in self._instances:

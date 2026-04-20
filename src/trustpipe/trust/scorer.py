@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from trustpipe.core.config import TrustPipeConfig
 from trustpipe.provenance.record import ProvenanceRecord
@@ -36,8 +36,8 @@ class TrustScore:
     composite: int  # 0-100
     grade: str  # A+ / A / B / C / D / F
     dimensions: list[DimensionScore]
-    record_id: Optional[str] = None
-    dataset_name: Optional[str] = None
+    record_id: str | None = None
+    dataset_name: str | None = None
     warnings: list[str] = field(default_factory=list)
     computed_at: str = ""
     id: str = ""
@@ -103,7 +103,7 @@ class ScanResult:
 class TrustScorer:
     """Computes trust scores from data + provenance context."""
 
-    def __init__(self, config: Optional[TrustPipeConfig] = None) -> None:
+    def __init__(self, config: TrustPipeConfig | None = None) -> None:
         self._config = config or TrustPipeConfig()
         self._dimensions: list[Dimension] = [cls() for cls in ALL_DIMENSION_CLASSES]
 
@@ -111,14 +111,14 @@ class TrustScorer:
         self,
         data: Any,
         *,
-        name: Optional[str] = None,
-        provenance_record: Optional[ProvenanceRecord] = None,
+        name: str | None = None,
+        provenance_record: ProvenanceRecord | None = None,
         chain_length: int = 0,
         reference: Any = None,
-        previous_columns: Optional[list[str]] = None,
-        previous_dtypes: Optional[dict[str, str]] = None,
-        historical_row_count: Optional[int] = None,
-        checks: Optional[list[str]] = None,
+        previous_columns: list[str] | None = None,
+        previous_dtypes: dict[str, str] | None = None,
+        historical_row_count: int | None = None,
+        checks: list[str] | None = None,
     ) -> TrustScore:
         """Compute composite trust score."""
         context = DimensionContext(

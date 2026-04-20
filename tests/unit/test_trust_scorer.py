@@ -13,11 +13,13 @@ def scorer():
 
 @pytest.fixture
 def sample_df():
-    return pd.DataFrame({
-        "id": range(1000),
-        "value": [i * 1.1 for i in range(1000)],
-        "category": ["A", "B", "C", "D"] * 250,
-    })
+    return pd.DataFrame(
+        {
+            "id": range(1000),
+            "value": [i * 1.1 for i in range(1000)],
+            "category": ["A", "B", "C", "D"] * 250,
+        }
+    )
 
 
 def test_score_returns_trust_score(scorer, sample_df):
@@ -85,11 +87,13 @@ def test_dict_data_scores(scorer):
 
 
 def test_high_quality_data_scores_well(scorer):
-    df = pd.DataFrame({
-        "a": range(10000),
-        "b": [float(i) for i in range(10000)],
-        "c": ["cat"] * 10000,
-    })
+    df = pd.DataFrame(
+        {
+            "a": range(10000),
+            "b": [float(i) for i in range(10000)],
+            "c": ["cat"] * 10000,
+        }
+    )
     result = scorer.score(df)
     # Complete data with no nulls should score well on completeness
     completeness = next(d for d in result.dimensions if d.name == "Completeness")

@@ -11,14 +11,25 @@ from trustpipe.provenance.record import ProvenanceRecord
 def sample_records():
     return [
         ProvenanceRecord(
-            id="rec1", name="raw_data", source="s3://bucket/raw.csv",
-            fingerprint="fp1", merkle_root="root1", merkle_index=0,
-            row_count=10000, column_count=5, column_names=["a", "b", "c", "d", "e"],
+            id="rec1",
+            name="raw_data",
+            source="s3://bucket/raw.csv",
+            fingerprint="fp1",
+            merkle_root="root1",
+            merkle_index=0,
+            row_count=10000,
+            column_count=5,
+            column_names=["a", "b", "c", "d", "e"],
         ),
         ProvenanceRecord(
-            id="rec2", name="clean_data", source="pipeline://etl/clean",
-            fingerprint="fp2", merkle_root="root2", merkle_index=1,
-            row_count=9500, parent_ids=["rec1"],
+            id="rec2",
+            name="clean_data",
+            source="pipeline://etl/clean",
+            fingerprint="fp2",
+            merkle_root="root2",
+            merkle_index=1,
+            row_count=9500,
+            parent_ids=["rec1"],
         ),
     ]
 
@@ -139,6 +150,7 @@ def test_comply_generates_audit_log(tp):
 
 def test_comply_json_format(tp):
     import json
+
     tp.track({"rows": 100}, name="json_test", source="file://test.csv")
     report = tp.comply("json_test", output_format="json")
     parsed = json.loads(report)
@@ -150,6 +162,7 @@ def test_comply_json_format(tp):
 def test_comply_with_trust_score(tp):
     """Compliance report should include trust score when available."""
     import pandas as pd
+
     df = pd.DataFrame({"a": range(100), "b": range(100)})
     tp.track(df, name="scored_data", source="s3://test")
     tp.score(df, name="scored_data")

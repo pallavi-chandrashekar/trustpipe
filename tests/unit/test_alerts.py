@@ -1,6 +1,6 @@
 """Tests for webhook and Slack alert system."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from trustpipe.alerts.webhook import AlertManager, SlackAlert, WebhookAlert
 
@@ -57,10 +57,14 @@ def test_alert_manager_integrity_failure():
     mock_alert.send.return_value = True
     mgr.add(mock_alert)
 
-    results = mgr.check_integrity({
-        "integrity": "COMPROMISED", "total": 10, "failed": 2,
-        "failed_ids": ["a", "b"],
-    })
+    results = mgr.check_integrity(
+        {
+            "integrity": "COMPROMISED",
+            "total": 10,
+            "failed": 2,
+            "failed_ids": ["a", "b"],
+        }
+    )
     assert len(results) == 1
     call_args = mock_alert.send.call_args[0][0]
     assert call_args["event"] == "integrity_failure"

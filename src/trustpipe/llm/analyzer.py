@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from trustpipe.llm.providers import LLMProvider
 
@@ -21,12 +21,12 @@ def analyze_data_semantics(
     prompt = f"""Analyze this dataset summary for potential data quality issues, anomalies, or signs of data poisoning.
 
 **Dataset Summary:**
-- Row count: {data_summary.get('row_count', 'Unknown')}
-- Columns: {data_summary.get('column_names', [])}
-- Null ratios: {data_summary.get('null_ratios', {})}
-- Data types: {data_summary.get('dtypes', {})}
+- Row count: {data_summary.get("row_count", "Unknown")}
+- Columns: {data_summary.get("column_names", [])}
+- Null ratios: {data_summary.get("null_ratios", {})}
+- Data types: {data_summary.get("dtypes", {})}
 
-{f'**Context:** {context}' if context else ''}
+{f"**Context:** {context}" if context else ""}
 
 Look for:
 1. Semantic anomalies (values that are technically valid but suspicious)

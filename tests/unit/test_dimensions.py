@@ -25,10 +25,12 @@ def config():
 
 @pytest.fixture
 def sample_df():
-    return pd.DataFrame({
-        "id": range(100),
-        "value": [float(i) for i in range(100)],
-    })
+    return pd.DataFrame(
+        {
+            "id": range(100),
+            "value": [float(i) for i in range(100)],
+        }
+    )
 
 
 def test_provenance_depth_no_record(config):
@@ -82,10 +84,12 @@ def test_completeness_no_nulls(config, sample_df):
 
 
 def test_completeness_with_nulls(config):
-    df = pd.DataFrame({
-        "a": [1, None, 3, None, 5],
-        "b": [None, None, None, None, None],
-    })
+    df = pd.DataFrame(
+        {
+            "a": [1, None, 3, None, 5],
+            "b": [None, None, None, None, None],
+        }
+    )
     ctx = DimensionContext(config=config)
     dim = Completeness()
     score = dim.compute(df, ctx)

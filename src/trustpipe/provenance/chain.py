@@ -11,8 +11,6 @@ It is a Merkle hash tree — the same data structure git uses for commits.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from trustpipe.core.exceptions import ProvenanceError
 from trustpipe.provenance.merkle import MerkleTree
 from trustpipe.provenance.record import ProvenanceRecord
@@ -102,7 +100,7 @@ class ProvenanceChain:
         return list(reversed(result))  # root-first order
 
     @property
-    def root(self) -> Optional[str]:
+    def root(self) -> str | None:
         """Current Merkle root hash."""
         return self._tree.get_merkle_root()
 

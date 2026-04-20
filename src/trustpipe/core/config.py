@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import Optional
 
 from trustpipe.core.exceptions import ConfigError
 
@@ -24,7 +23,7 @@ class TrustPipeConfig:
 
     # Storage
     storage_backend: str = "sqlite"
-    storage_path: Optional[str] = None
+    storage_path: str | None = None
 
     # Trust scoring weights (must sum to 1.0)
     weight_provenance_depth: float = 0.15
@@ -41,9 +40,9 @@ class TrustPipeConfig:
     freshness_half_life_days: float = 30.0
 
     # LLM (optional)
-    llm_provider: Optional[str] = None
-    llm_model: Optional[str] = None
-    llm_api_key: Optional[str] = None
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    llm_api_key: str | None = None
 
     # Project
     project_name: str = "default"

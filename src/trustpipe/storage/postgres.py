@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import Optional
 
 from trustpipe.core.exceptions import StorageError
 from trustpipe.provenance.record import ProvenanceRecord
@@ -99,8 +98,10 @@ class PostgresBackend(StorageBackend):
         if self._conn is None or self._conn.closed:
             try:
                 import psycopg
-            except ImportError:
-                raise ImportError("PostgreSQL backend requires psycopg: pip install trustpipe[postgres]")
+            except ImportError as e:
+                raise ImportError(
+                    "PostgreSQL backend requires psycopg: pip install trustpipe[postgres]"
+                ) from e
             self._conn = psycopg.connect(self._conninfo, autocommit=False)
         return self._conn
 
@@ -132,13 +133,21 @@ class PostgresBackend(StorageBackend):
                         created_at, data_timestamp, project)
                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                     (
-                        record.id, record.name, record.source,
-                        json.dumps(record.parent_ids), record.fingerprint,
-                        record.row_count, record.column_count,
-                        json.dumps(record.column_names), record.byte_size,
+                        record.id,
+                        record.name,
+                        record.source,
+                        json.dumps(record.parent_ids),
+                        record.fingerprint,
+                        record.row_count,
+                        record.column_count,
+                        json.dumps(record.column_names),
+                        record.byte_size,
                         json.dumps(record.statistical_summary),
-                        record.merkle_root, record.merkle_index, record.previous_root,
-                        json.dumps(record.tags), json.dumps(record.metadata),
+                        record.merkle_root,
+                        record.merkle_index,
+                        record.previous_root,
+                        json.dumps(record.tags),
+                        json.dumps(record.metadata),
                         record.created_at,
                         record.data_timestamp,
                         record.project,
@@ -149,7 +158,7 @@ class PostgresBackend(StorageBackend):
             conn.rollback()
             raise StorageError(f"Failed to save provenance record: {e}") from e
 
-    def load_provenance_record(self, record_id: str) -> Optional[ProvenanceRecord]:
+    def load_provenance_record(self, record_id: str) -> ProvenanceRecord | None:
         conn = self._get_conn()
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM provenance_records WHERE id = %s", (record_id,))
@@ -158,7 +167,9 @@ class PostgresBackend(StorageBackend):
             return None
         return self._row_to_record(row, cur.description)
 
-    def query_provenance_by_name(self, name: str, project: str = "default") -> list[ProvenanceRecord]:
+    def query_provenance_by_name(
+        self, name: str, project: str = "default"
+    ) -> list[ProvenanceRecord]:
         conn = self._get_conn()
         with conn.cursor() as cur:
             cur.execute(
@@ -171,27 +182,41 @@ class PostgresBackend(StorageBackend):
 
     def _row_to_record(self, row, description) -> ProvenanceRecord:
         cols = [d.name for d in description]
-        d = dict(zip(cols, row))
-        return ProvenanceRecord.from_dict({
-            "id": d["id"],
-            "name": d["name"],
-            "source": d["source"],
-            "parent_ids": d["parent_ids"] if isinstance(d["parent_ids"], list) else json.loads(d["parent_ids"] or "[]"),
-            "fingerprint": d["fingerprint"],
-            "row_count": d["row_count"],
-            "column_count": d["column_count"],
-            "column_names": d["column_names"] if isinstance(d["column_names"], list) else json.loads(d["column_names"] or "[]"),
-            "byte_size": d["byte_size"],
-            "statistical_summary": d["statistical_summary"] if isinstance(d["statistical_summary"], dict) else json.loads(d["statistical_summary"] or "{}"),
-            "merkle_root": d["merkle_root"],
-            "merkle_index": d["merkle_index"],
-            "previous_root": d["previous_root"],
-            "tags": d["tags"] if isinstance(d["tags"], list) else json.loads(d["tags"] or "[]"),
-            "metadata": d["metadata"] if isinstance(d["metadata"], dict) else json.loads(d["metadata"] or "{}"),
-            "created_at": d["created_at"].isoformat() if isinstance(d["created_at"], datetime) else d["created_at"],
-            "data_timestamp": d["data_timestamp"].isoformat() if isinstance(d["data_timestamp"], datetime) else d.get("data_timestamp"),
-            "project": d["project"],
-        })
+        d = dict(zip(cols, row, strict=False))
+        return ProvenanceRecord.from_dict(
+            {
+                "id": d["id"],
+                "name": d["name"],
+                "source": d["source"],
+                "parent_ids": d["parent_ids"]
+                if isinstance(d["parent_ids"], list)
+                else json.loads(d["parent_ids"] or "[]"),
+                "fingerprint": d["fingerprint"],
+                "row_count": d["row_count"],
+                "column_count": d["column_count"],
+                "column_names": d["column_names"]
+                if isinstance(d["column_names"], list)
+                else json.loads(d["column_names"] or "[]"),
+                "byte_size": d["byte_size"],
+                "statistical_summary": d["statistical_summary"]
+                if isinstance(d["statistical_summary"], dict)
+                else json.loads(d["statistical_summary"] or "{}"),
+                "merkle_root": d["merkle_root"],
+                "merkle_index": d["merkle_index"],
+                "previous_root": d["previous_root"],
+                "tags": d["tags"] if isinstance(d["tags"], list) else json.loads(d["tags"] or "[]"),
+                "metadata": d["metadata"]
+                if isinstance(d["metadata"], dict)
+                else json.loads(d["metadata"] or "{}"),
+                "created_at": d["created_at"].isoformat()
+                if isinstance(d["created_at"], datetime)
+                else d["created_at"],
+                "data_timestamp": d["data_timestamp"].isoformat()
+                if isinstance(d["data_timestamp"], datetime)
+                else d.get("data_timestamp"),
+                "project": d["project"],
+            }
+        )
 
     # ── Merkle ────────────────────────────────────────────────
 
@@ -199,7 +224,8 @@ class PostgresBackend(StorageBackend):
         conn = self._get_conn()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO merkle_nodes (idx, hash, project) VALUES (%s, %s, %s) ON CONFLICT (project, idx) DO UPDATE SET hash = EXCLUDED.hash",
+                "INSERT INTO merkle_nodes (idx, hash, project) VALUES (%s, %s, %s) "
+                "ON CONFLICT (project, idx) DO UPDATE SET hash = EXCLUDED.hash",
                 (index, hash_value, project),
             )
         conn.commit()
@@ -207,7 +233,9 @@ class PostgresBackend(StorageBackend):
     def load_merkle_hashes(self, project: str = "default") -> list[str]:
         conn = self._get_conn()
         with conn.cursor() as cur:
-            cur.execute("SELECT hash FROM merkle_nodes WHERE project = %s ORDER BY idx ASC", (project,))
+            cur.execute(
+                "SELECT hash FROM merkle_nodes WHERE project = %s ORDER BY idx ASC", (project,)
+            )
             return [r[0] for r in cur.fetchall()]
 
     # ── Trust Scores ──────────────────────────────────────────
@@ -221,9 +249,12 @@ class PostgresBackend(StorageBackend):
                     warnings, computed_at, config_snapshot, project)
                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                 (
-                    score_data["id"], score_data.get("record_id"),
-                    score_data.get("dataset_name"), score_data["composite"],
-                    score_data["grade"], json.dumps(score_data["dimensions"]),
+                    score_data["id"],
+                    score_data.get("record_id"),
+                    score_data.get("dataset_name"),
+                    score_data["composite"],
+                    score_data["grade"],
+                    json.dumps(score_data["dimensions"]),
                     json.dumps(score_data.get("warnings", [])),
                     score_data["computed_at"],
                     json.dumps(score_data.get("config_snapshot", {})),
@@ -232,7 +263,7 @@ class PostgresBackend(StorageBackend):
             )
         conn.commit()
 
-    def load_latest_trust_score(self, dataset_name: str, project: str = "default") -> Optional[dict]:
+    def load_latest_trust_score(self, dataset_name: str, project: str = "default") -> dict | None:
         conn = self._get_conn()
         with conn.cursor() as cur:
             cur.execute(
@@ -243,14 +274,22 @@ class PostgresBackend(StorageBackend):
             if not row:
                 return None
             cols = [d.name for d in cur.description]
-            d = dict(zip(cols, row))
+            d = dict(zip(cols, row, strict=False))
         return {
-            "id": d["id"], "record_id": d["record_id"],
-            "dataset_name": d["dataset_name"], "composite": d["composite"],
+            "id": d["id"],
+            "record_id": d["record_id"],
+            "dataset_name": d["dataset_name"],
+            "composite": d["composite"],
             "grade": d["grade"],
-            "dimensions": d["dimensions"] if isinstance(d["dimensions"], list) else json.loads(d["dimensions"]),
-            "warnings": d["warnings"] if isinstance(d["warnings"], list) else json.loads(d["warnings"] or "[]"),
-            "computed_at": d["computed_at"].isoformat() if isinstance(d["computed_at"], datetime) else d["computed_at"],
+            "dimensions": d["dimensions"]
+            if isinstance(d["dimensions"], list)
+            else json.loads(d["dimensions"]),
+            "warnings": d["warnings"]
+            if isinstance(d["warnings"], list)
+            else json.loads(d["warnings"] or "[]"),
+            "computed_at": d["computed_at"].isoformat()
+            if isinstance(d["computed_at"], datetime)
+            else d["computed_at"],
         }
 
     # ── Compliance ────────────────────────────────────────────
@@ -264,9 +303,12 @@ class PostgresBackend(StorageBackend):
                     generated_at, record_ids, trust_score_id, project)
                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                 (
-                    report_data["id"], report_data["dataset_name"],
-                    report_data["regulation"], report_data["content"],
-                    report_data["output_format"], report_data["generated_at"],
+                    report_data["id"],
+                    report_data["dataset_name"],
+                    report_data["regulation"],
+                    report_data["content"],
+                    report_data["output_format"],
+                    report_data["generated_at"],
                     json.dumps(report_data.get("record_ids", [])),
                     report_data.get("trust_score_id"),
                     report_data.get("project", "default"),
@@ -282,7 +324,9 @@ class PostgresBackend(StorageBackend):
             cur.execute("SELECT COUNT(*) FROM provenance_records WHERE project = %s", (project,))
             return cur.fetchone()[0]
 
-    def get_latest_records(self, project: str = "default", limit: int = 10) -> list[ProvenanceRecord]:
+    def get_latest_records(
+        self, project: str = "default", limit: int = 10
+    ) -> list[ProvenanceRecord]:
         conn = self._get_conn()
         with conn.cursor() as cur:
             cur.execute(

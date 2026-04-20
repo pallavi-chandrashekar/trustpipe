@@ -1,9 +1,6 @@
 """Tests for Pandas auto-tracking plugin."""
 
-import os
-
 import pandas as pd
-import pytest
 
 
 def test_pandas_plugin_tracks_read_csv(tp, tmp_path):
@@ -53,7 +50,7 @@ def test_pandas_plugin_deactivation(tp, tmp_path):
     plugin.deactivate()
 
     # After deactivation, reads should NOT be tracked
-    df = pd.read_csv(csv_path)
+    pd.read_csv(csv_path)
     records = tp.trace("test")
     assert len(records) == 0
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from trustpipe.provenance.record import ProvenanceRecord
@@ -28,7 +28,7 @@ class StorageBackend(ABC):
     def save_provenance_record(self, record: ProvenanceRecord) -> None: ...
 
     @abstractmethod
-    def load_provenance_record(self, record_id: str) -> Optional[ProvenanceRecord]: ...
+    def load_provenance_record(self, record_id: str) -> ProvenanceRecord | None: ...
 
     @abstractmethod
     def query_provenance_by_name(
@@ -55,7 +55,7 @@ class StorageBackend(ABC):
     @abstractmethod
     def load_latest_trust_score(
         self, dataset_name: str, project: str = "default"
-    ) -> Optional[dict]: ...
+    ) -> dict | None: ...
 
     # ── Compliance ────────────────────────────────────────────
 

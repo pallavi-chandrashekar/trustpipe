@@ -7,7 +7,7 @@ import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -20,15 +20,15 @@ class ProvenanceRecord:
 
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     name: str = ""
-    source: Optional[str] = None
+    source: str | None = None
     parent_ids: list[str] = field(default_factory=list)
 
     # Fingerprint (computed from data, never stores raw data)
     fingerprint: str = ""
-    row_count: Optional[int] = None
-    column_count: Optional[int] = None
+    row_count: int | None = None
+    column_count: int | None = None
     column_names: list[str] = field(default_factory=list)
-    byte_size: Optional[int] = None
+    byte_size: int | None = None
     statistical_summary: dict[str, Any] = field(default_factory=dict)
 
     # Merkle chain
@@ -42,7 +42,7 @@ class ProvenanceRecord:
 
     # Timestamps
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    data_timestamp: Optional[datetime] = None
+    data_timestamp: datetime | None = None
 
     # Project namespace
     project: str = "default"
@@ -97,10 +97,7 @@ class ProvenanceRecord:
             created_at = datetime.now(timezone.utc)
 
         data_ts = data.get("data_timestamp")
-        if isinstance(data_ts, str) and data_ts:
-            data_ts = datetime.fromisoformat(data_ts)
-        else:
-            data_ts = None
+        data_ts = datetime.fromisoformat(data_ts) if isinstance(data_ts, str) and data_ts else None
 
         return cls(
             id=data.get("id", uuid.uuid4().hex[:12]),
@@ -162,7 +159,9 @@ def fingerprint_data(data: Any) -> dict[str, Any]:
         result["column_count"] = data.get("columns", data.get("column_count"))
         result["column_names"] = data.get("column_names", [])
         result["statistical_summary"] = {
-            k: v for k, v in data.items() if k not in ("rows", "columns", "column_names", "row_count", "column_count")
+            k: v
+            for k, v in data.items()
+            if k not in ("rows", "columns", "column_names", "row_count", "column_count")
         }
         content = json.dumps(data, sort_keys=True, default=str)
         result["fingerprint"] = hashlib.sha256(content.encode()).hexdigest()

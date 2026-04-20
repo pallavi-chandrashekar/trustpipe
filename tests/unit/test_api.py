@@ -1,7 +1,5 @@
 """Tests for the FastAPI REST API."""
 
-import json
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -33,11 +31,14 @@ def test_status_empty(client):
 def test_track_and_trace(client):
     c, _ = client
     # Track
-    resp = c.post("/track", json={
-        "name": "test_data",
-        "source": "s3://bucket/data.csv",
-        "data": {"rows": 100, "columns": 5},
-    })
+    resp = c.post(
+        "/track",
+        json={
+            "name": "test_data",
+            "source": "s3://bucket/data.csv",
+            "data": {"rows": 100, "columns": 5},
+        },
+    )
     assert resp.status_code == 200
     record = resp.json()
     assert record["name"] == "test_data"

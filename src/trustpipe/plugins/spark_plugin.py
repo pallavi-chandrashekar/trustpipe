@@ -10,7 +10,7 @@ Usage:
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from trustpipe.plugins.base import TrustPipePlugin
 
@@ -26,8 +26,8 @@ class SparkPlugin(TrustPipePlugin):
     def __init__(self, tp: Any, spark_session: Any, **kwargs: Any) -> None:
         super().__init__(tp, **kwargs)
         self._spark = spark_session
-        self._original_load: Optional[Any] = None
-        self._original_save: Optional[Any] = None
+        self._original_load: Any | None = None
+        self._original_save: Any | None = None
 
     def activate(self) -> None:
         """Wrap Spark's DataFrameReader.load and DataFrameWriter.save."""
@@ -67,7 +67,10 @@ class SparkPlugin(TrustPipePlugin):
                     plugin.on_write(
                         destination=dest,
                         data={"framework": "spark"},
-                        metadata={"format": kwargs.get("format", "unknown"), "mode": kwargs.get("mode", "default")},
+                        metadata={
+                            "format": kwargs.get("format", "unknown"),
+                            "mode": kwargs.get("mode", "default"),
+                        },
                     )
                 except Exception:
                     pass
@@ -78,10 +81,12 @@ class SparkPlugin(TrustPipePlugin):
         """Restore original Spark reader/writer methods."""
         if self._original_load:
             from pyspark.sql import DataFrameReader
+
             DataFrameReader.load = self._original_load
             self._original_load = None
 
         if self._original_save:
             from pyspark.sql import DataFrameWriter
+
             DataFrameWriter.save = self._original_save
             self._original_save = None
