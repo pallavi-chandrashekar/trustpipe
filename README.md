@@ -98,8 +98,8 @@ trustpipe trace clean_customers
 Your Pipeline (Spark / Airflow / Pandas / dbt)
         │
         ▼
-┌─────────────────────────────────┐
-│         TrustPipe SDK           │
+┌────────────────────────────────┐
+│         TrustPipe SDK          │
 │  ┌──────────┐ ┌──────────────┐ │
 │  │Provenance│ │Trust Scoring │ │
 │  │(Merkle)  │ │(6 dimensions)│ │
@@ -109,7 +109,7 @@ Your Pipeline (Spark / Airflow / Pandas / dbt)
 │  │ (EU AI Act, NIST, SOC 2) │  │
 │  └──────────────────────────┘  │
 │  Storage: SQLite → Postgres    │
-└─────────────────────────────────┘
+└────────────────────────────────┘
 ```
 
 ## License
