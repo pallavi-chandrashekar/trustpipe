@@ -142,6 +142,108 @@ class TrustPipe:
             "integrity": "OK" if not failed else "COMPROMISED",
         }
 
+    # ── Layer 2: Trust ───────────────────────────────────────
+
+    def score(
+        self,
+        data: Any,
+        *,
+        name: Optional[str] = None,
+        reference: Any = None,
+        checks: Optional[list[str]] = None,
+    ) -> "TrustScore":
+        """Compute trust score (0-100) for a data asset.
+
+        Args:
+            data: The data to score.
+            name: If provided, links score to provenance and stores result.
+            reference: Reference dataset for drift detection.
+            checks: Subset of dimensions to evaluate. Default: all six.
+
+        Returns:
+            TrustScore with composite score and per-dimension breakdown.
+        """
+        from trustpipe.trust.scorer import TrustScorer
+
+        scorer = TrustScorer(config=self._config)
+
+        # Get provenance context if name is tracked
+        provenance_record = None
+        chain_length = 0
+        previous_columns = None
+        previous_dtypes = None
+        historical_row_count = None
+
+        if name:
+            chain = self._chain.get_chain(name)
+            chain_length = len(chain)
+            if chain:
+                provenance_record = chain[-1]
+                if len(chain) >= 2:
+                    prev = chain[-2]
+                    previous_columns = prev.column_names
+                    previous_dtypes = prev.statistical_summary.get("dtypes")
+                    historical_row_count = prev.row_count
+
+        result = scorer.score(
+            data,
+            name=name,
+            provenance_record=provenance_record,
+            chain_length=chain_length,
+            reference=reference,
+            previous_columns=previous_columns,
+            previous_dtypes=previous_dtypes,
+            historical_row_count=historical_row_count,
+            checks=checks,
+        )
+
+        # Store the score
+        if name:
+            self._storage.save_trust_score({
+                "id": result.id,
+                "record_id": result.record_id,
+                "dataset_name": name,
+                "composite": result.composite,
+                "grade": result.grade,
+                "dimensions": [d.__dict__ for d in result.dimensions],
+                "warnings": result.warnings,
+                "computed_at": result.computed_at,
+                "config_snapshot": self._config.get_weights(),
+                "project": self._project,
+            })
+
+        return result
+
+    def scan(
+        self,
+        data: Any,
+        *,
+        detectors: Optional[list[str]] = None,
+    ) -> "ScanResult":
+        """Deep scan for data poisoning and anomalies.
+
+        Args:
+            data: The data to scan (pandas DataFrame).
+            detectors: Subset of detectors. Default: ["iforest"].
+
+        Returns:
+            ScanResult with flagged rows, anomaly scores, summary.
+        """
+        from trustpipe.trust.poisoning import PoisoningDetector
+
+        detector = PoisoningDetector(config=self._config)
+        return detector.scan(data, detectors=detectors)
+
+    # ── Plugins ───────────────────────────────────────────────
+
+    def pandas(self) -> "PandasPlugin":
+        """Activate Pandas auto-tracking. Returns plugin for manual control."""
+        from trustpipe.plugins.pandas_plugin import PandasPlugin
+
+        plugin = PandasPlugin(self)
+        plugin.activate()
+        return plugin
+
     # ── Properties ────────────────────────────────────────────
 
     @property

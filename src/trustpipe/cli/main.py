@@ -178,3 +178,103 @@ def status(ctx: click.Context) -> None:
         console.print(table)
     else:
         console.print("[dim]No records yet. Start with: tp.track(data, name='...')")
+
+
+@cli.command()
+@click.argument("dataset")
+@click.option("--reference", "-r", type=click.Path(exists=True), help="Reference file for drift comparison")
+@click.option("--checks", help="Comma-separated dimensions to evaluate")
+@click.option("--format", "fmt", type=click.Choice(["table", "json", "brief"]), default="table")
+@click.pass_context
+def score(ctx: click.Context, dataset: str, reference: Optional[str], checks: Optional[str], fmt: str) -> None:
+    """Compute trust score for a dataset.
+
+    DATASET can be a name in the provenance chain or a file path.
+    """
+    tp = _get_tp(ctx)
+
+    # Try to load data if it's a file path
+    data = None
+    ref_data = None
+    check_list = checks.split(",") if checks else None
+
+    try:
+        import pandas as pd
+
+        if Path(dataset).exists():
+            if dataset.endswith(".csv"):
+                data = pd.read_csv(dataset)
+            elif dataset.endswith(".parquet"):
+                data = pd.read_parquet(dataset)
+            elif dataset.endswith(".json"):
+                data = pd.read_json(dataset)
+        if reference:
+            if reference.endswith(".csv"):
+                ref_data = pd.read_csv(reference)
+            elif reference.endswith(".parquet"):
+                ref_data = pd.read_parquet(reference)
+    except ImportError:
+        pass
+
+    if data is not None:
+        # Score the file directly
+        result = tp.score(data, name=dataset, reference=ref_data, checks=check_list)
+    else:
+        # Score by provenance name — use stored stats
+        chain = tp.trace(dataset)
+        if not chain:
+            console.print(f"[yellow]No data found for '{dataset}'. Provide a file path or tracked name.[/yellow]")
+            return
+        latest = chain[-1]
+        result = tp.score(
+            latest.statistical_summary or {"row_count": latest.row_count},
+            name=dataset,
+            reference=ref_data,
+            checks=check_list,
+        )
+
+    if fmt == "json":
+        click.echo(json.dumps(result.to_dict(), indent=2, default=str))
+    elif fmt == "brief":
+        grade_colors = {"A+": "green", "A": "green", "B": "blue", "C": "yellow", "D": "red", "F": "red"}
+        color = grade_colors.get(result.grade, "white")
+        console.print(f"[{color}]{result.composite}/100 ({result.grade})[/{color}] {dataset}")
+    else:
+        from trustpipe.cli.formatters import format_trust_score
+        format_trust_score(result)
+
+
+@cli.command()
+@click.argument("target", type=click.Path(exists=True))
+@click.option("--threshold", type=float, default=0.05, help="Contamination threshold")
+@click.option("--format", "fmt", type=click.Choice(["table", "json"]), default="table")
+@click.pass_context
+def scan(ctx: click.Context, target: str, threshold: float, fmt: str) -> None:
+    """Deep scan a dataset for poisoning and anomalies.
+
+    TARGET must be a file path (CSV, Parquet, or JSON).
+    """
+    try:
+        import pandas as pd
+    except ImportError:
+        console.print("[red]pandas is required for scan. Install: pip install trustpipe[trust][/red]")
+        return
+
+    if target.endswith(".csv"):
+        data = pd.read_csv(target)
+    elif target.endswith(".parquet"):
+        data = pd.read_parquet(target)
+    elif target.endswith(".json"):
+        data = pd.read_json(target)
+    else:
+        console.print(f"[yellow]Unsupported file format: {target}[/yellow]")
+        return
+
+    tp = _get_tp(ctx)
+    result = tp.scan(data)
+
+    if fmt == "json":
+        click.echo(json.dumps(result.to_dict(), indent=2))
+    else:
+        from trustpipe.cli.formatters import format_scan_result
+        format_scan_result(result)
