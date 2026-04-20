@@ -70,13 +70,27 @@ llm = [
     "anthropic>=0.30",
     "openai>=1.0",
 ]
+dashboard = [
+    "trustpipe[trust]",
+    "dash>=2.14",
+    "plotly>=5.0",
+]
+api = [
+    "trustpipe[trust]",
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+]
+dbt = [
+    "dbt-core>=1.6",
+]
 all = [
-    "trustpipe[trust,drift,poisoning,merkle,llm]",
+    "trustpipe[trust,drift,poisoning,merkle,llm,dashboard,api]",
 ]
 dev = [
     "trustpipe[all]",
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "httpx>=0.24",
     "mypy>=1.5",
     "ruff>=0.1",
 ]

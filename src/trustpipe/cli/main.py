@@ -350,3 +350,75 @@ def export_cmd(ctx: click.Context, fmt: str, output_path: Optional[str]) -> None
         console.print(f"[green]✓[/green] Exported {len(records)} records to {output_path}")
     else:
         click.echo(data)
+
+
+@cli.command()
+@click.option("--host", default="127.0.0.1", help="Host to bind")
+@click.option("--port", default=8050, type=int, help="Port number")
+@click.option("--debug", is_flag=True, help="Enable debug mode")
+@click.pass_context
+def dashboard(ctx: click.Context, host: str, port: int, debug: bool) -> None:
+    """Launch the web dashboard."""
+    try:
+        from trustpipe.dashboard.app import run_dashboard
+    except ImportError:
+        console.print("[red]Dashboard requires: pip install trustpipe[dashboard][/red]")
+        return
+
+    tp = _get_tp(ctx)
+    console.print(f"[green]✓[/green] Dashboard starting at http://{host}:{port}")
+    run_dashboard(tp, host=host, port=port, debug=debug)
+
+
+@cli.command()
+@click.option("--host", default="127.0.0.1", help="Host to bind")
+@click.option("--port", default=8000, type=int, help="Port number")
+@click.pass_context
+def serve(ctx: click.Context, host: str, port: int) -> None:
+    """Launch the REST API server."""
+    try:
+        from trustpipe.api.server import run_api
+    except ImportError:
+        console.print("[red]API server requires: pip install trustpipe[api][/red]")
+        return
+
+    tp = _get_tp(ctx)
+    console.print(f"[green]✓[/green] API starting at http://{host}:{port}")
+    console.print(f"  Docs: http://{host}:{port}/docs")
+    run_api(tp, host=host, port=port)
+
+
+@cli.command()
+@click.argument("dataset")
+@click.option("--threshold", "-t", default=70, type=int, help="Minimum trust score (0-100)")
+@click.option("--checks", help="Comma-separated dimensions to evaluate")
+@click.pass_context
+def gate(ctx: click.Context, dataset: str, threshold: int, checks: Optional[str]) -> None:
+    """CI/CD trust gate — exit non-zero if score < threshold.
+
+    Use in GitHub Actions or any CI pipeline:
+      trustpipe gate my_dataset --threshold 70
+    """
+    tp = _get_tp(ctx)
+
+    chain = tp.trace(dataset)
+    if not chain:
+        console.print(f"[red]FAIL[/red] No provenance records for '{dataset}'")
+        raise SystemExit(1)
+
+    latest = chain[-1]
+    check_list = checks.split(",") if checks else None
+    score = tp.score(
+        latest.statistical_summary or {"row_count": latest.row_count},
+        name=dataset,
+        checks=check_list,
+    )
+
+    if score.composite >= threshold:
+        console.print(f"[green]PASS[/green] {dataset}: {score.composite}/100 ({score.grade}) >= {threshold}")
+        raise SystemExit(0)
+    else:
+        console.print(f"[red]FAIL[/red] {dataset}: {score.composite}/100 ({score.grade}) < {threshold}")
+        for w in score.warnings:
+            console.print(f"  - {w}")
+        raise SystemExit(1)

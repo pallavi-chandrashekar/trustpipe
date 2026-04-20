@@ -1,0 +1,66 @@
+name: TrustPipe Data Trust Gate
+
+# Reusable workflow — call from any repo's CI pipeline.
+#
+# Usage in your project's .github/workflows/data-quality.yml:
+#
+#   jobs:
+#     trust-gate:
+#       runs-on: ubuntu-latest
+#       steps:
+#         - uses: actions/checkout@v4
+#         - run: pip install trustpipe[trust]
+#
+#         # Track your data (or use an existing DB)
+#         - run: |
+#             python -c "
+#             import pandas as pd
+#             from trustpipe import TrustPipe
+#             tp = TrustPipe(db_path='trustpipe.db')
+#             df = pd.read_parquet('data/training_set.parquet')
+#             tp.track(df, name='training_set', source='data/training_set.parquet')
+#             "
+#
+#         # Gate: fail CI if trust score < threshold
+#         - run: trustpipe --db trustpipe.db gate training_set --threshold 70
+
+on:
+  workflow_call:
+    inputs:
+      dataset:
+        description: "Dataset name to gate"
+        required: true
+        type: string
+      threshold:
+        description: "Minimum trust score (0-100)"
+        required: false
+        type: number
+        default: 70
+      db_path:
+        description: "Path to TrustPipe database"
+        required: false
+        type: string
+        default: "trustpipe.db"
+      python_version:
+        description: "Python version"
+        required: false
+        type: string
+        default: "3.11"
+
+jobs:
+  trust-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install TrustPipe
+        run: pip install trustpipe[trust]
+
+      - name: Run Trust Gate
+        run: |
+          trustpipe --db ${{ inputs.db_path }} gate ${{ inputs.dataset }} --threshold ${{ inputs.threshold }}
