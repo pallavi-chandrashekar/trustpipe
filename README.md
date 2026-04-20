@@ -243,21 +243,21 @@ Your Pipeline (Spark / Airflow / Pandas / dbt / Kafka)
         │
         ▼
 ┌──────────────────────────────────────────┐
-│            TrustPipe SDK                  │
+│            TrustPipe SDK                 │
 │                                          │
 │  Layer 1: Provenance                     │
 │  ┌────────────────────────────────────┐  │
-│  │ Merkle chain · Lineage DAG · Tags │  │
+│  │ Merkle chain · Lineage DAG · Tags  │  │
 │  └────────────────────────────────────┘  │
 │                                          │
 │  Layer 2: Trust                          │
 │  ┌────────────────────────────────────┐  │
-│  │ 6 dimensions · Drift · Poisoning  │  │
+│  │ 6 dimensions · Drift · Poisoning   │  │
 │  └────────────────────────────────────┘  │
 │                                          │
 │  Layer 3: Compliance                     │
 │  ┌────────────────────────────────────┐  │
-│  │ EU AI Act · Data Cards · Audits   │  │
+│  │ EU AI Act · Data Cards · Audits    │  │
 │  └────────────────────────────────────┘  │
 │                                          │
 │  Plugins: Pandas·Spark·Airflow·dbt·Kafka │
