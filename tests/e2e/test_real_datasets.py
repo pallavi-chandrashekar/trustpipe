@@ -17,7 +17,6 @@ import pytest
 
 from trustpipe import TrustPipe
 
-
 # ═══════════════════════════════════════════════════════════
 #  DATASET 1: UCI Adult Income (48,842 rows)
 #  Real bias issues: gender, race, education
@@ -95,7 +94,7 @@ class TestUCIAdultIncome:
 
         # Features: encode and select
         numeric = clean.select_dtypes(include="number")
-        r3 = self.tp.track(numeric, name="adult_features", parent=r2.id)
+        self.tp.track(numeric, name="adult_features", parent=r2.id)
 
         dropped = len(self.df) - len(clean)
         print(f"\n  [Adult] Pipeline: {len(self.df)} → {len(clean)} → {len(numeric.columns)} numeric cols")
@@ -172,15 +171,15 @@ class TestCreditCardFraud:
             # The actual Kaggle dataset needs authentication, so we use
             # a realistic simulation based on the real dataset's properties
             from sklearn.datasets import make_classification
-            X, y = make_classification(
+            features, labels = make_classification(
                 n_samples=50000, n_features=28, n_informative=10,
                 n_classes=2, weights=[0.983, 0.017],  # real fraud rate
                 random_state=42,
             )
-            self.df = pd.DataFrame(X, columns=[f"V{i}" for i in range(1, 29)])
+            self.df = pd.DataFrame(features, columns=[f"V{i}" for i in range(1, 29)])
             self.df["Amount"] = np.abs(np.random.lognormal(3, 2, 50000)).round(2)
             self.df["Time"] = np.arange(50000) * 2.0  # seconds
-            self.df["Class"] = y
+            self.df["Class"] = labels
             self.available = True
         except Exception:
             self.available = False
@@ -281,8 +280,8 @@ class TestCreditCardFraud:
         # Train/test split
         train = features.sample(frac=0.7, random_state=42)
         test = features.drop(train.index)
-        r4 = self.tp.track(train, name="fraud_train", parent=r3.id, tags=["training"])
-        r5 = self.tp.track(test, name="fraud_test", parent=r3.id, tags=["evaluation"])
+        self.tp.track(train, name="fraud_train", parent=r3.id, tags=["training"])
+        self.tp.track(test, name="fraud_test", parent=r3.id, tags=["evaluation"])
 
         # Verify full chain
         v = self.tp.verify()
@@ -291,7 +290,7 @@ class TestCreditCardFraud:
 
         lineage = self.tp.lineage("fraud_train")
         tree = lineage.to_tree_string()
-        print(f"\n  [Fraud] Full pipeline lineage:")
+        print("\n  [Fraud] Full pipeline lineage:")
         print(f"  {tree}")
         print(f"  [Fraud] Chain: {v['integrity']} ({v['verified']}/{v['total']})")
 
@@ -353,9 +352,10 @@ class TestCaliforniaHousing:
 
         # Train split
         train = normalized.sample(frac=0.8, random_state=42)
-        r4 = self.tp.track(train, name="housing_train", parent=r3.id, tags=["training"])
+        self.tp.track(train, name="housing_train", parent=r3.id, tags=["training"])
 
-        print(f"\n  [Housing] Pipeline: {len(self.df)} → {len(features)} ({features.shape[1]} cols) → normalized → {len(train)} train")
+        ncols = features.shape[1]
+        print(f"\n  [Housing] Pipeline: {len(self.df)} → {len(features)} ({ncols} cols) → norm → {len(train)} train")
 
         lineage = self.tp.lineage("housing_train")
         print(f"  [Housing] Lineage:\n  {lineage.to_tree_string()}")
@@ -440,7 +440,7 @@ class TestCaliforniaHousing:
         """Generate audit log after multi-step pipeline."""
         r1 = self.tp.track(self.df, name="housing_raw", source="sklearn://california-housing")
         r2 = self.tp.track(self.df.dropna(), name="housing_clean", parent=r1.id)
-        r3 = self.tp.track(
+        self.tp.track(
             self.df.sample(frac=0.8, random_state=42),
             name="housing_train", parent=r2.id,
         )
@@ -508,7 +508,7 @@ class TestHuggingFaceIMDB:
 
         # Train split
         train = processed.sample(frac=0.8, random_state=42)
-        r3 = self.tp.track(train, name="imdb_train_split", parent=r2.id, tags=["training"])
+        self.tp.track(train, name="imdb_train_split", parent=r2.id, tags=["training"])
 
         v = self.tp.verify()
         assert v["integrity"] == "OK"
