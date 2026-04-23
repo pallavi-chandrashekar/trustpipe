@@ -240,6 +240,21 @@ pip install trustpipe[dev]
 | **PostgreSQL** | Team collaboration | `pip install trustpipe[postgres]` |
 | **S3** | Enterprise scale | `pip install trustpipe[s3]` |
 
+## Docker
+
+Run PostgreSQL + API + Dashboard with one command:
+
+```bash
+cp .env.example .env        # configure credentials
+docker compose up            # starts all 3 services
+```
+
+| Service | Port | URL |
+|---------|------|-----|
+| **API** | 8000 | http://localhost:8000/docs |
+| **Dashboard** | 8050 | http://localhost:8050 |
+| **PostgreSQL** | 5432 | `postgresql://trustpipe:trustpipe@localhost/trustpipe` |
+
 ## Tested on Real Data
 
 TrustPipe is validated against real-world production datasets — not just synthetic examples.
