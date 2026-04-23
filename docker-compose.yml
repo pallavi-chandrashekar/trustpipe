@@ -1,0 +1,57 @@
+# TrustPipe — Docker Compose
+#
+# Start everything:
+#   docker compose up
+#
+# Services:
+#   - postgres:  PostgreSQL database (port 5432)
+#   - api:       REST API server (port 8000, docs at /docs)
+#   - dashboard: Web dashboard (port 8050)
+#
+# First run:
+#   cp .env.example .env
+#   docker compose up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-trustpipe}
+      POSTGRES_USER: ${POSTGRES_USER:-trustpipe}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trustpipe}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trustpipe}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    command: trustpipe serve --host 0.0.0.0 --port 8000
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      TRUSTPIPE_STORAGE_BACKEND: postgres
+      TRUSTPIPE_STORAGE_PATH: "postgresql://${POSTGRES_USER:-trustpipe}:${POSTGRES_PASSWORD:-trustpipe}@postgres:5432/${POSTGRES_DB:-trustpipe}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  dashboard:
+    build: .
+    command: trustpipe dashboard --host 0.0.0.0 --port 8050
+    ports:
+      - "${DASHBOARD_PORT:-8050}:8050"
+    environment:
+      TRUSTPIPE_STORAGE_BACKEND: postgres
+      TRUSTPIPE_STORAGE_PATH: "postgresql://${POSTGRES_USER:-trustpipe}:${POSTGRES_PASSWORD:-trustpipe}@postgres:5432/${POSTGRES_DB:-trustpipe}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

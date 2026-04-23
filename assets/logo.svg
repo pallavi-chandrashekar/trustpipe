@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100" fill="none">
+  <!-- Shield icon -->
+  <path d="M30 20 L55 10 L80 20 L80 55 C80 72 55 85 55 85 C55 85 30 72 30 55 Z"
+        fill="#2563eb" opacity="0.9"/>
+  <path d="M45 45 L52 52 L68 36" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Chain links (Merkle) -->
+  <circle cx="55" cy="70" r="3" fill="white" opacity="0.7"/>
+  <circle cx="45" cy="75" r="2" fill="white" opacity="0.5"/>
+  <circle cx="65" cy="75" r="2" fill="white" opacity="0.5"/>
+
+  <!-- Text: TrustPipe -->
+  <text x="95" y="55" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="42" font-weight="700" fill="#1e293b">
+    Trust<tspan fill="#2563eb">Pipe</tspan>
+  </text>
+
+  <!-- Tagline -->
+  <text x="96" y="78" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" fill="#64748b" letter-spacing="0.5">
+    AI Data Supply Chain Trust &amp; Provenance
+  </text>
+</svg>

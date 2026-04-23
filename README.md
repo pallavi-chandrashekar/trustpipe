@@ -1,6 +1,10 @@
-# TrustPipe
+<p align="center">
+  <img src="assets/logo.svg" alt="TrustPipe" width="400">
+</p>
 
-**AI Data Supply Chain Trust & Provenance Platform**
+<p align="center">
+  <strong>AI Data Supply Chain Trust & Provenance Platform</strong>
+</p>
 
 Track data provenance, score trust, detect poisoning, and generate compliance reports — inside your existing data pipelines.
 
